@@ -331,3 +331,62 @@ $$;
 revoke execute on function public.create_order_from_cart(uuid) from public;
 revoke execute on function public.create_order_from_cart(uuid) from anon;
 grant execute on function public.create_order_from_cart(uuid) to authenticated;
+
+-- ==== 20260101000018_handle_new_user_metadata.sql ====
+-- Reemplaza handle_new_user(): ahora lee display_name y role desde
+-- new.raw_user_meta_data (enviados por signUp(options.data) en el
+-- registro). El role se valida contra una lista blanca ('buyer'|'seller') —
+-- CUALQUIER otro valor, incluido 'admin' manipulado por el cliente, cae a
+-- 'buyer'. Es la ÚNICA vía para fijar el role de un usuario nuevo: después
+-- de este INSERT, protect_profile_role (Fase 2.3) bloquea que el propio
+-- usuario se lo cambie.
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.profiles (id, display_name, role)
+  values (
+    new.id,
+    coalesce(nullif(new.raw_user_meta_data->>'display_name', ''), split_part(new.email, '@', 1)),
+    case
+      when new.raw_user_meta_data->>'role' in ('buyer', 'seller') then new.raw_user_meta_data->>'role'
+      else 'buyer'
+    end
+  );
+  return new;
+end;
+$$;
+
+-- ==== 20260101000017_fix_protect_profile_role.sql (ver policies.sql para el resto de RLS) ====
+-- Corrige protect_profile_role(): la versión original bloqueaba CUALQUIER
+-- cambio de role, incluso desde conexiones administrativas/scripts (seed,
+-- migraciones) sin sesión de usuario, porque auth.uid() es NULL ahí y
+-- is_admin() siempre da falso en ese contexto. Se detectó al correr
+-- supabase/seed.sql contra un proyecto real (Fase 2.5): el UPDATE que
+-- corrige el role de sellers/admin fallaba con "No tienes permiso para
+-- cambiar tu rol".
+--
+-- La regla de negocio real es: un usuario AUTENTICADO no puede cambiar su
+-- propio role salvo que sea admin. Fuera de una sesión autenticada
+-- (auth.uid() is null) no aplica RLS de todos modos, así que tampoco debe
+-- aplicar esta restricción.
+create or replace function public.protect_profile_role()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null then
+    return new;
+  end if;
+
+  if new.role <> old.role and not public.is_admin() then
+    raise exception 'No tienes permiso para cambiar tu rol';
+  end if;
+  return new;
+end;
+$$;

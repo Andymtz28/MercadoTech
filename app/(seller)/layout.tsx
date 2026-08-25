@@ -1,10 +1,34 @@
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { SellerSidebar } from "@/components/layout/SellerSidebar";
 import { Container } from "@/components/shared/Container";
+import { LoadingState } from "@/components/shared/LoadingState";
+import { useAuth } from "@/hooks/useAuth";
 
-// Punto de extensión (Fase 3.3): aquí se conecta el guard de rol —
-// redirigir a "/" con un toast si el usuario autenticado no es
-// seller/admin. No implementado todavía, solo el layout visual.
+// Guard de rol: el middleware ya exige sesión para /vendedor/**, aquí solo
+// falta exigir que el rol sea seller/admin (dato que el middleware no puede
+// leer sin una consulta extra a profiles).
 export default function SellerLayout({ children }: LayoutProps<"/">) {
+  const { user, initializing } = useAuth();
+  const router = useRouter();
+
+  const allowed = user?.role === "seller" || user?.role === "admin";
+
+  useEffect(() => {
+    if (initializing) return;
+    if (!allowed) {
+      toast.error("Necesitas una cuenta de vendedor para entrar aquí.");
+      router.push("/");
+    }
+  }, [initializing, allowed, router]);
+
+  if (initializing || !allowed) {
+    return <LoadingState message="Verificando acceso…" />;
+  }
+
   return (
     <div className="flex min-h-full flex-1">
       <SellerSidebar />
