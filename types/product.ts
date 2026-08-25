@@ -1,0 +1,29 @@
+import type { Database } from "@/types/database";
+import type { ProductCondition } from "@/lib/constants/roles";
+
+export type ProductImage = Database["public"]["Tables"]["product_images"]["Row"];
+
+// `price` llega como string desde PostgREST (columna numeric) — el service
+// la convierte a number antes de exponerla. `image_url` y las métricas de
+// reseñas son campos calculados, no columnas.
+export type Product = Omit<
+  Database["public"]["Tables"]["products"]["Row"],
+  "price" | "condition"
+> & {
+  price: number;
+  condition: ProductCondition;
+  image_url: string | null;
+  average_rating: number | null;
+  review_count: number;
+};
+
+export type ProductWithImages = Product & {
+  images: ProductImage[];
+};
+
+export interface ProductFilters {
+  categorySlug?: string;
+  search?: string;
+  sort?: "recent" | "price_asc" | "price_desc";
+  page?: number;
+}
