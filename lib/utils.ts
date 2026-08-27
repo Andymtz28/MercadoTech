@@ -17,3 +17,21 @@ export function formatPrice(value: number | string): string {
   const numeric = typeof value === "string" ? Number(value) : value
   return priceFormatter.format(numeric)
 }
+
+// Los errores de Supabase (PostgrestError, AuthError) son objetos con
+// `.message` pero NO instancias de `Error` — `err instanceof Error` falla
+// silenciosamente para ellos y esconde el mensaje real (el que nombra el
+// producto en los errores del checkout). Se lee `.message` de forma
+// estructural en vez de por tipo, sin reescribirlo.
+export function getErrorMessage(error: unknown, fallback = "Ocurrió un error inesperado."): string {
+  if (
+    error &&
+    typeof error === "object" &&
+    "message" in error &&
+    typeof (error as { message: unknown }).message === "string" &&
+    (error as { message: string }).message
+  ) {
+    return (error as { message: string }).message
+  }
+  return fallback
+}

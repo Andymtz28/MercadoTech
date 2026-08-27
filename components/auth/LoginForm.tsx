@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { validateLogin, type FieldErrors, type LoginInput } from "@/lib/validators/auth";
+import { getErrorMessage } from "@/lib/utils";
 
 interface LoginFormProps {
   onSubmit: (input: LoginInput) => Promise<void>;
@@ -30,7 +31,7 @@ export function LoginForm({ onSubmit }: LoginFormProps) {
     try {
       await onSubmit(input);
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : "No se pudo iniciar sesión.");
+      setFormError(getErrorMessage(error, "No se pudo iniciar sesión."));
     } finally {
       setSubmitting(false);
     }

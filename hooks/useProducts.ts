@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { getErrorMessage } from "@/lib/utils";
 import { listActiveProducts } from "@/services/product.service";
 import type { Product, ProductFilters } from "@/types/product";
 
@@ -22,7 +23,7 @@ export function useProducts(filters: ProductFilters) {
       setItems(result.items);
       setTotal(result.total);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudieron cargar los productos.");
+      setError(getErrorMessage(err, "No se pudieron cargar los productos."));
     } finally {
       setLoading(false);
     }

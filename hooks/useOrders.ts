@@ -3,31 +3,35 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getErrorMessage } from "@/lib/utils";
-import { listCategories } from "@/services/category.service";
-import type { Category } from "@/types/category";
+import { listOrders } from "@/services/order.service";
+import type { Order } from "@/types/order";
 
-export function useCategories() {
+export function useOrders(userId?: string) {
   const supabase = useRef(createClient()).current;
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
+    if (!userId) {
+      setOrders([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
-      const data = await listCategories(supabase);
-      setCategories(data);
+      setOrders(await listOrders(userId, supabase));
     } catch (err) {
-      setError(getErrorMessage(err, "No se pudieron cargar las categorías."));
+      setError(getErrorMessage(err, "No se pudieron cargar tus pedidos."));
     } finally {
       setLoading(false);
     }
-  }, [supabase]);
+  }, [userId, supabase]);
 
   useEffect(() => {
     reload();
   }, [reload]);
 
-  return { categories, loading, error, reload };
+  return { orders, loading, error, reload };
 }

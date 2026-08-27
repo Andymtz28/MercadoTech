@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { getErrorMessage } from "@/lib/utils";
 import { listFavoriteProducts } from "@/services/favorite.service";
 import type { Product } from "@/types/product";
 
@@ -24,7 +25,7 @@ export function useFavorites(userId?: string) {
       const data = await listFavoriteProducts(userId, supabase);
       setProducts(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudieron cargar tus favoritos.");
+      setError(getErrorMessage(err, "No se pudieron cargar tus favoritos."));
     } finally {
       setLoading(false);
     }

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { getErrorMessage } from "@/lib/utils";
 import { getProductById } from "@/services/product.service";
 import type { ProductWithImages } from "@/types/product";
 
@@ -18,7 +19,7 @@ export function useProduct(id: string) {
       const data = await getProductById(id, supabase);
       setProduct(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo cargar el producto.");
+      setError(getErrorMessage(err, "No se pudo cargar el producto."));
     } finally {
       setLoading(false);
     }

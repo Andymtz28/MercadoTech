@@ -8,9 +8,11 @@ import { useProduct } from "@/hooks/useProduct";
 import { useQuestions } from "@/hooks/useQuestions";
 import { useReviews } from "@/hooks/useReviews";
 import { useFavorite } from "@/hooks/useFavorite";
+import { useCart } from "@/hooks/useCart";
 import { registerView } from "@/services/product.service";
 import { getPublicUrl } from "@/services/storage.service";
 import { createClient } from "@/lib/supabase/client";
+import { getErrorMessage } from "@/lib/utils";
 import { Container } from "@/components/shared/Container";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { ErrorState } from "@/components/shared/ErrorState";
@@ -27,6 +29,7 @@ export default function ProductDetailPage() {
   const { questions, ask, answer } = useQuestions(id);
   const { reviews, canReview, submitReview } = useReviews(id, user?.id);
   const { favorite, toggle: toggleFavorite } = useFavorite(id, user?.id);
+  const { add: addToCart } = useCart(user?.id);
   const supabase = useMemo(() => createClient(), []);
   const imageUrls = useMemo(
     () => (product ? product.images.map((img) => getPublicUrl(img.image_path, supabase)) : []),
@@ -46,13 +49,14 @@ export default function ProductDetailPage() {
   if (!product) return <ErrorState message="Producto no encontrado." />;
 
   const isOwnProduct = user?.id === product.seller_id;
+  const productId = product.id;
 
   async function handleAsk(question: string) {
     if (!user) return;
     try {
       await ask(user.id, question);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "No se pudo enviar la pregunta.");
+      toast.error(getErrorMessage(err, "No se pudo enviar la pregunta."));
     }
   }
 
@@ -61,7 +65,7 @@ export default function ProductDetailPage() {
       await answer(questionId, answerText);
       toast.success("Respuesta publicada");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "No se pudo publicar la respuesta.");
+      toast.error(getErrorMessage(err, "No se pudo publicar la respuesta."));
     }
   }
 
@@ -70,7 +74,7 @@ export default function ProductDetailPage() {
       await submitReview(rating, comment);
       toast.success("Reseña publicada");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "No se pudo publicar la reseña.");
+      toast.error(getErrorMessage(err, "No se pudo publicar la reseña."));
     }
   }
 
@@ -78,7 +82,16 @@ export default function ProductDetailPage() {
     try {
       await toggleFavorite();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "No se pudo actualizar favoritos.");
+      toast.error(getErrorMessage(err, "No se pudo actualizar favoritos."));
+    }
+  }
+
+  async function handleAddToCart() {
+    try {
+      await addToCart(productId);
+      toast.success("Agregado al carrito");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "No se pudo agregar al carrito."));
     }
   }
 
@@ -95,6 +108,7 @@ export default function ProductDetailPage() {
             isOwnProduct={isOwnProduct}
             isFavorite={favorite}
             onToggleFavorite={user ? handleToggleFavorite : undefined}
+            onAddToCart={user && !isOwnProduct && product.stock > 0 ? handleAddToCart : undefined}
           />
         </div>
       </div>

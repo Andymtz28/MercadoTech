@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { getErrorMessage } from "@/lib/utils";
 import { answerQuestion, askQuestion, listQuestions } from "@/services/question.service";
 import type { Question } from "@/types/question";
 
@@ -18,7 +19,7 @@ export function useQuestions(productId: string) {
       const data = await listQuestions(productId, supabase);
       setQuestions(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudieron cargar las preguntas.");
+      setError(getErrorMessage(err, "No se pudieron cargar las preguntas."));
     } finally {
       setLoading(false);
     }

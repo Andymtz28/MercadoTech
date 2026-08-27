@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { getErrorMessage } from "@/lib/utils";
 import { canReview, createReview, listReviews, type CanReviewResult } from "@/services/review.service";
 import type { Review } from "@/types/review";
 
@@ -23,7 +24,7 @@ export function useReviews(productId: string, userId?: string) {
       setReviews(list);
       setCanReviewResult(can);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudieron cargar las reseñas.");
+      setError(getErrorMessage(err, "No se pudieron cargar las reseñas."));
     } finally {
       setLoading(false);
     }

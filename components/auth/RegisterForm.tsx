@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { validateRegister, type FieldErrors, type RegisterInput } from "@/lib/validators/auth";
+import { getErrorMessage } from "@/lib/utils";
 
 interface RegisterFormProps {
   onSubmit: (input: RegisterInput) => Promise<void>;
@@ -39,7 +40,7 @@ export function RegisterForm({ onSubmit }: RegisterFormProps) {
     try {
       await onSubmit(input);
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : "No se pudo crear la cuenta.");
+      setFormError(getErrorMessage(error, "No se pudo crear la cuenta."));
     } finally {
       setSubmitting(false);
     }
