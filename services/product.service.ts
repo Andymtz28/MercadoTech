@@ -9,10 +9,13 @@ import type { ProductCondition } from "@/lib/constants/roles";
 type Client = SupabaseClient<Database>;
 type ProductRow = Database["public"]["Tables"]["products"]["Row"];
 
-interface ProductRowWithRelations extends ProductRow {
+export interface ProductRowWithRelations extends ProductRow {
   product_images: Pick<ProductImage, "id" | "image_path" | "position" | "product_id">[];
   reviews: { rating: number }[];
 }
+
+export const PRODUCT_WITH_RELATIONS_SELECT =
+  "*, product_images(id, image_path, position, product_id), reviews(rating)";
 
 export interface ListProductsResult {
   items: Product[];
@@ -24,7 +27,7 @@ function averageRating(ratings: number[]): number | null {
   return ratings.reduce((sum, r) => sum + r, 0) / ratings.length;
 }
 
-function mapProductRow(row: ProductRowWithRelations, supabase: Client): Product {
+export function mapProductRow(row: ProductRowWithRelations, supabase: Client): Product {
   const images = [...row.product_images].sort((a, b) => a.position - b.position);
   const cover = images[0];
   const ratings = row.reviews.map((r) => r.rating);
@@ -118,4 +121,10 @@ export async function getProductImages(
     .order("position");
   if (error) throw error;
   return data ?? [];
+}
+
+// Fire-and-forget en el hook que lo llame: un error aquí no debe romper la UI.
+export async function registerView(productId: string, userId: string, supabase: Client = createClient()) {
+  const { error } = await supabase.from("product_views").insert({ product_id: productId, user_id: userId });
+  if (error) throw error;
 }
