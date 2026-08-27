@@ -5,11 +5,12 @@ import { toast } from "sonner";
 import { Navbar } from "@/components/layout/Navbar";
 import { Container } from "@/components/shared/Container";
 import { useAuth } from "@/hooks/useAuth";
+import { useCategories } from "@/hooks/useCategories";
 
-// categories/cartCount siguen estáticos ([]/0); useCategories (Fase 3.4) y
-// useCart (Fase 3.6) los conectan más adelante.
+// cartCount sigue estático (0); useCart (Fase 3.6) lo conecta más adelante.
 export default function ShopLayout({ children }: LayoutProps<"/">) {
   const { user, logout } = useAuth();
+  const { categories } = useCategories();
   const router = useRouter();
 
   async function handleLogout() {
@@ -22,7 +23,7 @@ export default function ShopLayout({ children }: LayoutProps<"/">) {
   return (
     <div className="flex min-h-full flex-col">
       <Navbar
-        categories={[]}
+        categories={categories}
         cartCount={0}
         user={user ? { displayName: user.display_name, email: user.email, role: user.role } : null}
         onLogout={handleLogout}
