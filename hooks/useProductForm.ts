@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { getProductById } from "@/services/product.service";
 import { createProduct, updateProduct } from "@/services/seller.service";
+import { triggerReindex } from "@/services/indexing-trigger.service";
 import {
   deleteProductImage,
   getPublicUrl,
@@ -133,6 +134,7 @@ export function useProductForm(sellerId: string, productId?: string) {
     try {
       if (isEdit) {
         await updateProduct(productId!, fields);
+        triggerReindex("producto", productId!);
         return productId!;
       }
 
@@ -143,6 +145,7 @@ export function useProductForm(sellerId: string, productId?: string) {
           await uploadProductImage(image.file, sellerId, newId, index);
         }
       }
+      triggerReindex("producto", newId);
       return newId;
     } finally {
       setSaving(false);

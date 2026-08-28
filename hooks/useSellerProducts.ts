@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { deleteProduct, listSellerProducts } from "@/services/seller.service";
+import { triggerReindex } from "@/services/indexing-trigger.service";
 import { getErrorMessage } from "@/lib/utils";
 import type { Product } from "@/types/product";
 
@@ -35,6 +36,7 @@ export function useSellerProducts(sellerId?: string) {
     async (productId: string) => {
       try {
         await deleteProduct(productId);
+        triggerReindex("producto", productId);
         await reload();
       } catch (err) {
         // 23503 = foreign_key_violation: el producto tiene ventas
