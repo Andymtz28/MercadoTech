@@ -14,6 +14,8 @@ interface ProductGridProps {
   emptyDescription?: string;
   emptyActionLabel?: string;
   onEmptyAction?: () => void;
+  // Producto -> similitud (0-1): solo la pestaña "Resultados con IA" lo pasa.
+  similarityById?: Record<string, number>;
 }
 
 export function ProductGrid({
@@ -25,6 +27,7 @@ export function ProductGrid({
   emptyDescription = "Prueba con otros filtros o vuelve más tarde.",
   emptyActionLabel,
   onEmptyAction,
+  similarityById,
 }: ProductGridProps) {
   if (error) {
     return <ErrorState message={error} onRetry={onRetry} />;
@@ -54,7 +57,7 @@ export function ProductGrid({
   return (
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
       {products.map((product) => (
-        <ProductCard key={product.id} product={product} />
+        <ProductCard key={product.id} product={product} similarity={similarityById?.[product.id]} />
       ))}
     </div>
   );
