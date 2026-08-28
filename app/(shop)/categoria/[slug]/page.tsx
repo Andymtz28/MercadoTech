@@ -1,14 +1,16 @@
 "use client";
 
+import { Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useProducts } from "@/hooks/useProducts";
 import { ProductGrid } from "@/components/catalog/ProductGrid";
 import { FiltersPanel } from "@/components/catalog/FiltersPanel";
 import { Pagination } from "@/components/catalog/Pagination";
 import { Container } from "@/components/shared/Container";
+import { LoadingState } from "@/components/shared/LoadingState";
 import { CATALOG_PAGE_SIZE, DEFAULT_SORT, type SortOption } from "@/lib/constants/catalog";
 
-export default function CategoryPage() {
+function CategoryContent() {
   const { slug } = useParams<{ slug: string }>();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -44,5 +46,13 @@ export default function CategoryPage() {
       />
       <Pagination page={page} totalPages={totalPages} onPageChange={(p) => updateParams({ page: p })} />
     </Container>
+  );
+}
+
+export default function CategoryPage() {
+  return (
+    <Suspense fallback={<LoadingState message="Cargando categoría…" />}>
+      <CategoryContent />
+    </Suspense>
   );
 }

@@ -1,14 +1,16 @@
 "use client";
 
+import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useProducts } from "@/hooks/useProducts";
 import { ProductGrid } from "@/components/catalog/ProductGrid";
 import { FiltersPanel } from "@/components/catalog/FiltersPanel";
 import { Pagination } from "@/components/catalog/Pagination";
 import { Container } from "@/components/shared/Container";
+import { LoadingState } from "@/components/shared/LoadingState";
 import { CATALOG_PAGE_SIZE, DEFAULT_SORT, type SortOption } from "@/lib/constants/catalog";
 
-export default function SearchPage() {
+function SearchContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const q = searchParams.get("q") || "";
@@ -46,5 +48,13 @@ export default function SearchPage() {
       />
       <Pagination page={page} totalPages={totalPages} onPageChange={(p) => updateParams({ page: p })} />
     </Container>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={<LoadingState message="Buscando…" />}>
+      <SearchContent />
+    </Suspense>
   );
 }

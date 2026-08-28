@@ -39,7 +39,12 @@ export default function CartPage() {
     <Container className="space-y-6 py-8">
       <h1 className="text-2xl font-bold">Carrito</h1>
       {items.length === 0 ? (
-        <EmptyState title="Tu carrito está vacío" description="Agrega productos desde el catálogo." />
+        <EmptyState
+          title="Tu carrito está vacío"
+          description="Agrega productos desde el catálogo."
+          actionLabel="Ver catálogo"
+          onAction={() => router.push("/")}
+        />
       ) : (
         <div className="grid gap-6 md:grid-cols-3">
           <div className="md:col-span-2">

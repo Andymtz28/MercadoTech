@@ -1,14 +1,16 @@
 "use client";
 
+import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useProducts } from "@/hooks/useProducts";
 import { ProductGrid } from "@/components/catalog/ProductGrid";
 import { FiltersPanel } from "@/components/catalog/FiltersPanel";
 import { Pagination } from "@/components/catalog/Pagination";
 import { Container } from "@/components/shared/Container";
+import { LoadingState } from "@/components/shared/LoadingState";
 import { CATALOG_PAGE_SIZE, DEFAULT_SORT, type SortOption } from "@/lib/constants/catalog";
 
-export default function HomePage() {
+function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const sort = (searchParams.get("sort") as SortOption) || DEFAULT_SORT;
@@ -36,5 +38,15 @@ export default function HomePage() {
       <ProductGrid products={items} loading={loading} error={error} onRetry={reload} />
       <Pagination page={page} totalPages={totalPages} onPageChange={(p) => updateParams({ page: p })} />
     </Container>
+  );
+}
+
+// useSearchParams exige un límite de Suspense para el build de producción
+// (Next.js necesita poder prerenderizar un fallback estático).
+export default function HomePage() {
+  return (
+    <Suspense fallback={<LoadingState message="Cargando catálogo…" />}>
+      <HomeContent />
+    </Suspense>
   );
 }

@@ -47,3 +47,15 @@ export async function getCurrentUser(supabase: Client = createClient()): Promise
 
   return { ...(data as Profile), email: user.email! };
 }
+
+// Encapsula el listener de auth para que hooks/ no necesite conocer
+// lib/supabase directamente (cadena hooks → services → Supabase). Devuelve
+// la función de limpieza (unsubscribe). El SDK propaga los cambios entre
+// instancias del cliente aunque login/logout usen una instancia distinta a
+// la de este listener.
+export function subscribeToAuthChanges(onChange: () => void, supabase: Client = createClient()): () => void {
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange(() => onChange());
+  return () => subscription.unsubscribe();
+}

@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useOrders } from "@/hooks/useOrders";
 import { Container } from "@/components/shared/Container";
@@ -11,6 +12,7 @@ import { OrderCard } from "@/components/orders/OrderCard";
 export default function OrdersPage() {
   const { user } = useAuth();
   const { orders, loading, error, reload } = useOrders(user?.id);
+  const router = useRouter();
 
   return (
     <Container className="space-y-6 py-8">
@@ -20,7 +22,12 @@ export default function OrdersPage() {
       ) : error ? (
         <ErrorState message={error} onRetry={reload} />
       ) : orders.length === 0 ? (
-        <EmptyState title="Todavía no tienes pedidos" description="Tus compras aparecerán aquí." />
+        <EmptyState
+          title="Todavía no tienes pedidos"
+          description="Tus compras aparecerán aquí."
+          actionLabel="Ver catálogo"
+          onAction={() => router.push("/")}
+        />
       ) : (
         <div className="space-y-3">
           {orders.map((order) => (

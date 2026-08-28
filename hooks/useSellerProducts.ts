@@ -1,13 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useCallback, useEffect, useState } from "react";
 import { deleteProduct, listSellerProducts } from "@/services/seller.service";
 import { getErrorMessage } from "@/lib/utils";
 import type { Product } from "@/types/product";
 
 export function useSellerProducts(sellerId?: string) {
-  const supabase = useRef(createClient()).current;
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -21,13 +19,13 @@ export function useSellerProducts(sellerId?: string) {
     setLoading(true);
     setError(null);
     try {
-      setProducts(await listSellerProducts(sellerId, supabase));
+      setProducts(await listSellerProducts(sellerId));
     } catch (err) {
       setError(getErrorMessage(err, "No se pudieron cargar tus productos."));
     } finally {
       setLoading(false);
     }
-  }, [sellerId, supabase]);
+  }, [sellerId]);
 
   useEffect(() => {
     reload();
@@ -36,7 +34,7 @@ export function useSellerProducts(sellerId?: string) {
   const remove = useCallback(
     async (productId: string) => {
       try {
-        await deleteProduct(productId, supabase);
+        await deleteProduct(productId);
         await reload();
       } catch (err) {
         // 23503 = foreign_key_violation: el producto tiene ventas
@@ -48,7 +46,7 @@ export function useSellerProducts(sellerId?: string) {
         throw err;
       }
     },
-    [supabase, reload],
+    [reload],
   );
 
   return { products, loading, error, remove, reload };

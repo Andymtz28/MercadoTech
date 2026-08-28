@@ -12,6 +12,8 @@ interface ProductGridProps {
   onRetry?: () => void;
   emptyTitle?: string;
   emptyDescription?: string;
+  emptyActionLabel?: string;
+  onEmptyAction?: () => void;
 }
 
 export function ProductGrid({
@@ -21,6 +23,8 @@ export function ProductGrid({
   onRetry,
   emptyTitle = "No encontramos productos",
   emptyDescription = "Prueba con otros filtros o vuelve más tarde.",
+  emptyActionLabel,
+  onEmptyAction,
 }: ProductGridProps) {
   if (error) {
     return <ErrorState message={error} onRetry={onRetry} />;
@@ -37,7 +41,14 @@ export function ProductGrid({
   }
 
   if (products.length === 0) {
-    return <EmptyState title={emptyTitle} description={emptyDescription} />;
+    return (
+      <EmptyState
+        title={emptyTitle}
+        description={emptyDescription}
+        actionLabel={emptyActionLabel}
+        onAction={onEmptyAction}
+      />
+    );
   }
 
   return (

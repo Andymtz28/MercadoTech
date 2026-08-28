@@ -1,7 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useCallback, useEffect, useState } from "react";
 import { listSellerOrders, updateOrderStatus } from "@/services/order.service";
 import { getErrorMessage } from "@/lib/utils";
 import { ORDER_STATUS_FLOW } from "@/lib/constants/orders";
@@ -13,7 +12,6 @@ function canAdvance(from: OrderStatus, to: OrderStatus): boolean {
 }
 
 export function useSellerOrders(sellerId?: string) {
-  const supabase = useRef(createClient()).current;
   const [orders, setOrders] = useState<SellerOrderView[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,13 +25,13 @@ export function useSellerOrders(sellerId?: string) {
     setLoading(true);
     setError(null);
     try {
-      setOrders(await listSellerOrders(sellerId, supabase));
+      setOrders(await listSellerOrders(sellerId));
     } catch (err) {
       setError(getErrorMessage(err, "No se pudieron cargar tus pedidos."));
     } finally {
       setLoading(false);
     }
-  }, [sellerId, supabase]);
+  }, [sellerId]);
 
   useEffect(() => {
     reload();
@@ -42,20 +40,17 @@ export function useSellerOrders(sellerId?: string) {
   // Rechaza cualquier transición que no sea un paso adelante en
   // ORDER_STATUS_FLOW SIN llamar al service; con transición válida hace una
   // actualización optimista y revierte con toast si el service falla.
-  const moveOrder = useCallback(
-    async (orderId: string, from: OrderStatus, to: OrderStatus) => {
-      if (!canAdvance(from, to)) return;
+  const moveOrder = useCallback(async (orderId: string, from: OrderStatus, to: OrderStatus) => {
+    if (!canAdvance(from, to)) return;
 
-      setOrders((prev) => prev.map((order) => (order.id === orderId ? { ...order, status: to } : order)));
-      try {
-        await updateOrderStatus(orderId, to, supabase);
-      } catch (err) {
-        setOrders((prev) => prev.map((order) => (order.id === orderId ? { ...order, status: from } : order)));
-        throw err;
-      }
-    },
-    [supabase],
-  );
+    setOrders((prev) => prev.map((order) => (order.id === orderId ? { ...order, status: to } : order)));
+    try {
+      await updateOrderStatus(orderId, to);
+    } catch (err) {
+      setOrders((prev) => prev.map((order) => (order.id === orderId ? { ...order, status: from } : order)));
+      throw err;
+    }
+  }, []);
 
   return { orders, loading, error, moveOrder, reload };
 }

@@ -1,13 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useCallback, useEffect, useState } from "react";
 import { getErrorMessage } from "@/lib/utils";
 import { answerQuestion, askQuestion, listQuestions } from "@/services/question.service";
 import type { Question } from "@/types/question";
 
 export function useQuestions(productId: string) {
-  const supabase = useRef(createClient()).current;
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -16,14 +14,14 @@ export function useQuestions(productId: string) {
     setLoading(true);
     setError(null);
     try {
-      const data = await listQuestions(productId, supabase);
+      const data = await listQuestions(productId);
       setQuestions(data);
     } catch (err) {
       setError(getErrorMessage(err, "No se pudieron cargar las preguntas."));
     } finally {
       setLoading(false);
     }
-  }, [productId, supabase]);
+  }, [productId]);
 
   useEffect(() => {
     reload();
@@ -31,18 +29,18 @@ export function useQuestions(productId: string) {
 
   const ask = useCallback(
     async (userId: string, question: string) => {
-      await askQuestion({ productId, userId, question }, supabase);
+      await askQuestion({ productId, userId, question });
       await reload();
     },
-    [productId, supabase, reload],
+    [productId, reload],
   );
 
   const answer = useCallback(
     async (questionId: string, answerText: string) => {
-      await answerQuestion(questionId, answerText, supabase);
+      await answerQuestion(questionId, answerText);
       await reload();
     },
-    [supabase, reload],
+    [reload],
   );
 
   return { questions, loading, error, ask, answer, reload };

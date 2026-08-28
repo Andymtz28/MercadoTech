@@ -1,13 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { getErrorMessage } from "@/lib/utils";
 import { addItem, checkout, listCartItems, removeItem, updateQuantity } from "@/services/cart.service";
 import type { CartItemWithProduct } from "@/types/cart";
 
 export function useCart(userId?: string) {
-  const supabase = useRef(createClient()).current;
   const [items, setItems] = useState<CartItemWithProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -21,13 +19,13 @@ export function useCart(userId?: string) {
     setLoading(true);
     setError(null);
     try {
-      setItems(await listCartItems(userId, supabase));
+      setItems(await listCartItems(userId));
     } catch (err) {
       setError(getErrorMessage(err, "No se pudo cargar el carrito."));
     } finally {
       setLoading(false);
     }
-  }, [userId, supabase]);
+  }, [userId]);
 
   useEffect(() => {
     reload();
@@ -36,26 +34,26 @@ export function useCart(userId?: string) {
   const add = useCallback(
     async (productId: string, quantity = 1) => {
       if (!userId) throw new Error("Inicia sesión para agregar productos al carrito.");
-      await addItem(userId, productId, quantity, supabase);
+      await addItem(userId, productId, quantity);
       await reload();
     },
-    [userId, supabase, reload],
+    [userId, reload],
   );
 
   const changeQuantity = useCallback(
     async (cartItemId: string, quantity: number) => {
-      await updateQuantity(cartItemId, quantity, supabase);
+      await updateQuantity(cartItemId, quantity);
       await reload();
     },
-    [supabase, reload],
+    [reload],
   );
 
   const remove = useCallback(
     async (cartItemId: string) => {
-      await removeItem(cartItemId, supabase);
+      await removeItem(cartItemId);
       await reload();
     },
-    [supabase, reload],
+    [reload],
   );
 
   // Tras error el carrito se recarga (el stock pudo cambiar); tras éxito
@@ -64,14 +62,14 @@ export function useCart(userId?: string) {
   const runCheckout = useCallback(async () => {
     if (!userId) throw new Error("Inicia sesión para comprar.");
     try {
-      const orderId = await checkout(userId, supabase);
+      const orderId = await checkout(userId);
       await reload();
       return orderId;
     } catch (err) {
       await reload();
       throw err;
     }
-  }, [userId, supabase, reload]);
+  }, [userId, reload]);
 
   const count = useMemo(() => items.reduce((sum, item) => sum + item.quantity, 0), [items]);
   const subtotal = useMemo(

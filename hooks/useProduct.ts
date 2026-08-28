@@ -1,13 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useCallback, useEffect, useState } from "react";
 import { getErrorMessage } from "@/lib/utils";
 import { getProductById } from "@/services/product.service";
 import type { ProductWithImages } from "@/types/product";
 
 export function useProduct(id: string) {
-  const supabase = useRef(createClient()).current;
   const [product, setProduct] = useState<ProductWithImages | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -16,14 +14,14 @@ export function useProduct(id: string) {
     setLoading(true);
     setError(null);
     try {
-      const data = await getProductById(id, supabase);
+      const data = await getProductById(id);
       setProduct(data);
     } catch (err) {
       setError(getErrorMessage(err, "No se pudo cargar el producto."));
     } finally {
       setLoading(false);
     }
-  }, [id, supabase]);
+  }, [id]);
 
   useEffect(() => {
     reload();

@@ -1,7 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useCallback, useEffect, useState } from "react";
 import { getProductById } from "@/services/product.service";
 import { createProduct, updateProduct } from "@/services/seller.service";
 import {
@@ -27,7 +26,6 @@ const EMPTY_FIELDS: ProductFormInput = {
 };
 
 export function useProductForm(sellerId: string, productId?: string) {
-  const supabase = useRef(createClient()).current;
   const isEdit = !!productId;
   const [fields, setFields] = useState<ProductFormInput>(EMPTY_FIELDS);
   const [images, setImages] = useState<GalleryImage[]>([]);
@@ -38,7 +36,7 @@ export function useProductForm(sellerId: string, productId?: string) {
     if (!productId) return;
     let active = true;
     setLoading(true);
-    getProductById(productId, supabase).then((product) => {
+    getProductById(productId).then((product) => {
       if (!active || !product) return;
       setFields({
         title: product.title,
@@ -56,7 +54,7 @@ export function useProductForm(sellerId: string, productId?: string) {
           .map((img) => ({
             id: img.id,
             imagePath: img.image_path,
-            publicUrl: getPublicUrl(img.image_path, supabase),
+            publicUrl: getPublicUrl(img.image_path),
             position: img.position,
             file: null,
           })),
@@ -66,7 +64,7 @@ export function useProductForm(sellerId: string, productId?: string) {
     return () => {
       active = false;
     };
-  }, [productId, supabase]);
+  }, [productId]);
 
   const updateField = useCallback(<K extends keyof ProductFormInput>(key: K, value: ProductFormInput[K]) => {
     setFields((prev) => ({ ...prev, [key]: value }));
@@ -90,9 +88,9 @@ export function useProductForm(sellerId: string, productId?: string) {
         image_path: img.imagePath,
         position: img.position,
       }));
-      await saveImageOrder(rows, supabase);
+      await saveImageOrder(rows);
     },
-    [isEdit, productId, supabase],
+    [isEdit, productId],
   );
 
   const addImage = useCallback(
@@ -109,13 +107,13 @@ export function useProductForm(sellerId: string, productId?: string) {
       }
 
       const maxPosition = images.reduce((max, img) => Math.max(max, img.position), -1);
-      const row = await uploadProductImage(file, sellerId, productId!, maxPosition + 1, supabase);
+      const row = await uploadProductImage(file, sellerId, productId!, maxPosition + 1);
       setImages((prev) => [
         ...prev,
-        { id: row.id, imagePath: row.image_path, publicUrl: getPublicUrl(row.image_path, supabase), position: row.position, file: null },
+        { id: row.id, imagePath: row.image_path, publicUrl: getPublicUrl(row.image_path), position: row.position, file: null },
       ]);
     },
-    [isEdit, images, sellerId, productId, supabase],
+    [isEdit, images, sellerId, productId],
   );
 
   const removeImage = useCallback(
@@ -123,33 +121,33 @@ export function useProductForm(sellerId: string, productId?: string) {
       const target = images.find((img) => img.id === imageId);
       if (!target) return;
       if (target.imagePath) {
-        await deleteProductImage(imageId, target.imagePath, supabase);
+        await deleteProductImage(imageId, target.imagePath);
       }
       setImages((prev) => prev.filter((img) => img.id !== imageId));
     },
-    [images, supabase],
+    [images],
   );
 
   const submit = useCallback(async (): Promise<string> => {
     setSaving(true);
     try {
       if (isEdit) {
-        await updateProduct(productId!, fields, supabase);
+        await updateProduct(productId!, fields);
         return productId!;
       }
 
-      const newId = await createProduct({ ...fields, sellerId }, supabase);
+      const newId = await createProduct({ ...fields, sellerId });
       for (let index = 0; index < images.length; index += 1) {
         const image = images[index];
         if (image.file) {
-          await uploadProductImage(image.file, sellerId, newId, index, supabase);
+          await uploadProductImage(image.file, sellerId, newId, index);
         }
       }
       return newId;
     } finally {
       setSaving(false);
     }
-  }, [isEdit, productId, fields, images, sellerId, supabase]);
+  }, [isEdit, productId, fields, images, sellerId]);
 
   return {
     fields,

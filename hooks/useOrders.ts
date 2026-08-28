@@ -1,13 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useCallback, useEffect, useState } from "react";
 import { getErrorMessage } from "@/lib/utils";
 import { listOrders } from "@/services/order.service";
 import type { Order } from "@/types/order";
 
 export function useOrders(userId?: string) {
-  const supabase = useRef(createClient()).current;
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -21,13 +19,13 @@ export function useOrders(userId?: string) {
     setLoading(true);
     setError(null);
     try {
-      setOrders(await listOrders(userId, supabase));
+      setOrders(await listOrders(userId));
     } catch (err) {
       setError(getErrorMessage(err, "No se pudieron cargar tus pedidos."));
     } finally {
       setLoading(false);
     }
-  }, [userId, supabase]);
+  }, [userId]);
 
   useEffect(() => {
     reload();

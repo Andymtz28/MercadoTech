@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useFavorites } from "@/hooks/useFavorites";
 import { Container } from "@/components/shared/Container";
@@ -8,6 +9,7 @@ import { ProductGrid } from "@/components/catalog/ProductGrid";
 export default function FavoritesPage() {
   const { user } = useAuth();
   const { products, loading, error, reload } = useFavorites(user?.id);
+  const router = useRouter();
 
   return (
     <Container className="space-y-6 py-8">
@@ -19,6 +21,8 @@ export default function FavoritesPage() {
         onRetry={reload}
         emptyTitle="Todavía no tienes favoritos"
         emptyDescription="Los productos que marques con el corazón aparecerán aquí."
+        emptyActionLabel="Ver catálogo"
+        onEmptyAction={() => router.push("/")}
       />
     </Container>
   );
