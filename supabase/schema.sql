@@ -409,3 +409,84 @@ alter table public.order_items
 alter table public.order_items
   add constraint order_items_product_id_fkey
   foreign key (product_id) references public.products (id) on delete restrict;
+
+-- ==== 20260101000021_enable_pgvector.sql ====
+-- Habilita pgvector (tipo `vector` + operadores de distancia) en el schema
+-- extensions, igual convención que pgcrypto (migración 20260101000000):
+-- nunca en `public`, para no mezclar objetos de extensión con el esquema
+-- de dominio.
+create extension if not exists vector with schema extensions;
+
+-- ==== 20260101000022_create_knowledge_embeddings.sql ====
+-- knowledge_embeddings: UNA tabla para las dos fuentes que se indexan
+-- (productos y artículos de soporte), discriminada por source_type — más
+-- simple que dos tablas gemelas y permite búsquedas conjuntas (útil si
+-- mañana se agrega una fuente nueva: mismo patrón, otro source_type).
+--
+-- source_id NO tiene foreign key: apunta a dos tablas origen distintas
+-- (products o support_articles) según source_type, y Postgres no soporta
+-- FKs condicionales. Consecuencia: si se borra el producto/artículo
+-- original, la ficha queda huérfana (source_id ya no resuelve a ninguna
+-- fila). La Fase 4.3 mitiga esto con limpieza best-effort al borrar un
+-- producto, y la Fase 4.4 descarta huérfanos al hidratar resultados.
+--
+-- Cambiar de modelo de embeddings a uno con otra dimensión exige migración:
+-- `alter table knowledge_embeddings alter column embedding type
+-- extensions.vector(N)` + recrear el índice HNSW y la función
+-- match_knowledge con la nueva dimensión — no basta con cambiar la
+-- variable de entorno del modelo.
+create table public.knowledge_embeddings (
+  id uuid primary key default gen_random_uuid(),
+  source_type text not null check (source_type in ('producto', 'articulo_soporte')),
+  source_id uuid not null,
+  chunk_index integer not null default 0,
+  content text not null,
+  embedding extensions.vector(384) not null,
+  metadata jsonb not null default '{}',
+  created_at timestamptz not null default now(),
+  unique (source_type, source_id, chunk_index)
+);
+
+alter table public.knowledge_embeddings enable row level security;
+
+create index knowledge_embeddings_embedding_idx
+  on public.knowledge_embeddings
+  using hnsw (embedding extensions.vector_cosine_ops);
+
+-- ==== 20260101000023_create_match_knowledge.sql ====
+-- RPC de recuperación: dado el embedding de una consulta, devuelve las
+-- fichas más parecidas por similitud coseno (1 - distancia). SECURITY
+-- INVOKER (a diferencia de create_order_from_cart, que es SECURITY
+-- DEFINER): esta función solo LEE datos ya filtrados por RLS según quién
+-- llama — no necesita saltarse permisos, necesita respetarlos. Si
+-- p_source_type es null, busca en ambas fuentes.
+create function public.match_knowledge(
+  query_embedding extensions.vector(384),
+  p_source_type text default null,
+  match_count int default 5,
+  similarity_threshold float default 0.3
+)
+returns table (
+  source_type text,
+  source_id uuid,
+  content text,
+  metadata jsonb,
+  similarity float
+)
+language sql
+stable
+security invoker
+set search_path = public, extensions
+as $$
+  select
+    ke.source_type,
+    ke.source_id,
+    ke.content,
+    ke.metadata,
+    1 - (ke.embedding <=> query_embedding) as similarity
+  from public.knowledge_embeddings ke
+  where (p_source_type is null or ke.source_type = p_source_type)
+    and 1 - (ke.embedding <=> query_embedding) >= similarity_threshold
+  order by ke.embedding <=> query_embedding
+  limit match_count;
+$$;
