@@ -19,3 +19,15 @@ export type Order = Omit<
 export type OrderWithItems = Order & {
   items: OrderItem[];
 };
+
+// Vista de un pedido desde la perspectiva del vendedor (Fase 3.7): solo SUS
+// ítems y el total de esos ítems, no el pedido completo (puede ser
+// multi-vendedor).
+export interface SellerOrderView {
+  id: string;
+  status: OrderStatus;
+  createdAt: string;
+  buyerId: string;
+  myItems: OrderItem[];
+  myTotal: number;
+}

@@ -27,3 +27,14 @@ export interface ProductFilters {
   sort?: "recent" | "price_asc" | "price_desc";
   page?: number;
 }
+
+// Imagen en la galería local del formulario de vendedor (Fase 3.7).
+// `file` presente = todavía no subida (modo create, antes del submit);
+// ausente = ya persistida.
+export interface GalleryImage {
+  id: string;
+  imagePath: string | null;
+  publicUrl: string;
+  position: number;
+  file: File | null;
+}

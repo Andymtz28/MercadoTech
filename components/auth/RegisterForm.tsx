@@ -88,7 +88,11 @@ export function RegisterForm({ onSubmit }: RegisterFormProps) {
 
       <div className="space-y-1.5">
         <Label htmlFor="role">Tipo de cuenta</Label>
-        <Select value={role} onValueChange={(value) => setRole(value as RegisterInput["role"])}>
+        <Select
+          value={role}
+          onValueChange={(value) => setRole(value as RegisterInput["role"])}
+          items={{ buyer: "Comprador", seller: "Vendedor" }}
+        >
           <SelectTrigger id="role" className="w-full">
             <SelectValue placeholder="Selecciona un tipo de cuenta" />
           </SelectTrigger>
