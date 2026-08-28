@@ -50,14 +50,24 @@ export async function searchByEmbedding(
   }));
 }
 
-// Embedding de la consulta + matching contra fichas de producto +
-// hidratación con products ACTIVOS (precio/imagen actuales, mismas
-// convenciones que product.service). Una ficha puede apuntar a un producto
-// ya borrado o desactivado (huérfano, sin FK dura) — se descarta en
-// silencio en vez de mostrar un resultado roto.
-export async function searchProducts(query: string, supabase: Client, opts: SearchOptions = {}): Promise<ProductMatch[]> {
+// Embedding de la consulta + matching — envoltura de searchByEmbedding para
+// callers (chat.service) que solo tienen el texto de la consulta.
+export async function searchKnowledge(
+  query: string,
+  sourceType: KnowledgeSourceType | null,
+  supabase: Client,
+  opts: SearchOptions = {},
+): Promise<KnowledgeMatch[]> {
   const embedding = await generateEmbedding(query);
-  const matches = await searchByEmbedding(embedding, "producto", supabase, opts);
+  return searchByEmbedding(embedding, sourceType, supabase, opts);
+}
+
+// Matching contra fichas de producto + hidratación con products ACTIVOS
+// (precio/imagen actuales, mismas convenciones que product.service). Una
+// ficha puede apuntar a un producto ya borrado o desactivado (huérfano, sin
+// FK dura) — se descarta en silencio en vez de mostrar un resultado roto.
+export async function searchProducts(query: string, supabase: Client, opts: SearchOptions = {}): Promise<ProductMatch[]> {
+  const matches = await searchKnowledge(query, "producto", supabase, opts);
   if (matches.length === 0) return [];
 
   const { data, error } = await supabase
