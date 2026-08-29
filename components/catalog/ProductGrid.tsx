@@ -16,6 +16,10 @@ interface ProductGridProps {
   onEmptyAction?: () => void;
   // Producto -> similitud (0-1): solo la pestaña "Resultados con IA" lo pasa.
   similarityById?: Record<string, number>;
+  // Comparador + agregar al carrito: solo Resultados los pasa.
+  compareIds?: string[];
+  onCompareChange?: (productId: string, checked: boolean) => void;
+  onAddToCart?: (productId: string) => void;
 }
 
 export function ProductGrid({
@@ -28,6 +32,9 @@ export function ProductGrid({
   emptyActionLabel,
   onEmptyAction,
   similarityById,
+  compareIds,
+  onCompareChange,
+  onAddToCart,
 }: ProductGridProps) {
   if (error) {
     return <ErrorState message={error} onRetry={onRetry} />;
@@ -57,7 +64,14 @@ export function ProductGrid({
   return (
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
       {products.map((product) => (
-        <ProductCard key={product.id} product={product} similarity={similarityById?.[product.id]} />
+        <ProductCard
+          key={product.id}
+          product={product}
+          similarity={similarityById?.[product.id]}
+          compareChecked={compareIds?.includes(product.id)}
+          onCompareChange={onCompareChange ? (checked) => onCompareChange(product.id, checked) : undefined}
+          onAddToCart={onAddToCart ? () => onAddToCart(product.id) : undefined}
+        />
       ))}
     </div>
   );

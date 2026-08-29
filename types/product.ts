@@ -25,8 +25,11 @@ export type ProductWithImages = Product & {
 export interface ProductFilters {
   categorySlug?: string;
   search?: string;
-  sort?: "recent" | "price_asc" | "price_desc";
+  sort?: "recent" | "price_asc" | "price_desc" | "rating_desc";
   page?: number;
+  brands?: string[];
+  maxPrice?: number;
+  condition?: ProductCondition;
 }
 
 // Imagen en la galería local del formulario de vendedor (Fase 3.7).

@@ -1,15 +1,5 @@
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { ChevronDown } from "lucide-react";
 import { SORT_OPTIONS, type SortOption } from "@/lib/constants/catalog";
-
-// Base UI's <Select.Value> muestra el value crudo salvo que se le pase un
-// mapa value → etiqueta vía la prop `items` de Select.Root.
-const SORT_LABELS = Object.fromEntries(SORT_OPTIONS.map((option) => [option.value, option.label]));
 
 interface FiltersPanelProps {
   sort: SortOption;
@@ -17,26 +7,33 @@ interface FiltersPanelProps {
   resultCount?: number;
 }
 
+// Select nativo (no el de Base UI): combinado con el layout de dos
+// columnas de Resultados, el Select de Base UI deja la página colgada en
+// el Suspense de este layout — problema de la librería, no del filtro.
 export function FiltersPanel({ sort, onSortChange, resultCount }: FiltersPanelProps) {
   return (
-    <div className="flex items-center justify-between gap-4">
+    <div className="flex items-center justify-between gap-4 rounded-xl border border-border bg-card p-[11px]">
       {typeof resultCount === "number" && (
-        <p className="text-sm text-muted-foreground">
-          {resultCount} {resultCount === 1 ? "producto" : "productos"}
+        <p className="text-sm">
+          <span className="font-heading font-bold text-text-strong">{resultCount}</span>{" "}
+          <span className="text-text-quiet">{resultCount === 1 ? "producto" : "productos"}</span>
         </p>
       )}
-      <Select value={sort} onValueChange={(value) => onSortChange(value as SortOption)} items={SORT_LABELS}>
-        <SelectTrigger className="ml-auto w-56" aria-label="Ordenar productos">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
+      <div className="relative ml-auto">
+        <select
+          aria-label="Ordenar productos"
+          value={sort}
+          onChange={(e) => onSortChange(e.target.value as SortOption)}
+          className="w-56 appearance-none rounded-lg border border-border-strong bg-surface-input py-1.5 pr-8 pl-3 text-sm text-text-secondary outline-none focus-visible:border-primary"
+        >
           {SORT_OPTIONS.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
+            <option key={option.value} value={option.value}>
               {option.label}
-            </SelectItem>
+            </option>
           ))}
-        </SelectContent>
-      </Select>
+        </select>
+        <ChevronDown className="pointer-events-none absolute top-1/2 right-2.5 size-4 -translate-y-1/2 text-text-quiet" />
+      </div>
     </div>
   );
 }

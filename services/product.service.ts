@@ -73,6 +73,27 @@ export async function listActiveProducts(
     const term = filters.search.replace(/[%_]/g, "");
     query = query.or(`title.ilike.%${term}%,brand.ilike.%${term}%`);
   }
+  if (filters.brands && filters.brands.length > 0) {
+    query = query.in("brand", filters.brands);
+  }
+  if (filters.maxPrice !== undefined) {
+    query = query.lte("price", filters.maxPrice);
+  }
+  if (filters.condition) {
+    query = query.eq("condition", filters.condition);
+  }
+
+  if (filters.sort === "rating_desc") {
+    // average_rating es un agregado sobre reviews — PostgREST no puede
+    // ordenar por él. El catálogo es chico: se trae todo lo que matchea el
+    // resto de filtros y se ordena/pagina en memoria.
+    const { data, error } = await query;
+    if (error) throw error;
+    const allItems = ((data ?? []) as unknown as ProductRowWithRelations[])
+      .map((row) => mapProductRow(row, supabase))
+      .sort((a, b) => (b.average_rating ?? 0) - (a.average_rating ?? 0));
+    return { items: allItems.slice(from, to + 1), total: allItems.length };
+  }
 
   if (filters.sort === "price_asc") {
     query = query.order("price", { ascending: true });
@@ -90,6 +111,28 @@ export async function listActiveProducts(
     items: rows.map((row) => mapProductRow(row, supabase)),
     total: count ?? 0,
   };
+}
+
+export interface BrandCount {
+  brand: string;
+  count: number;
+}
+
+// Marcas + conteo para el sidebar de Resultados — en memoria, misma razón
+// que los conteos de categoría del Home (PostgREST no agrupa).
+export async function listBrandCounts(supabase: Client = createClient()): Promise<BrandCount[]> {
+  const { data, error } = await supabase.from("products").select("brand").eq("is_active", true);
+  if (error) throw error;
+
+  const counts = new Map<string, number>();
+  for (const row of data ?? []) {
+    if (!row.brand) continue;
+    counts.set(row.brand, (counts.get(row.brand) ?? 0) + 1);
+  }
+
+  return Array.from(counts.entries())
+    .map(([brand, count]) => ({ brand, count }))
+    .sort((a, b) => b.count - a.count);
 }
 
 export async function getProductById(

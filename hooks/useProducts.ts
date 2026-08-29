@@ -11,13 +11,16 @@ export function useProducts(filters: ProductFilters) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const { categorySlug, search, sort, page } = filters;
+  const { categorySlug, search, sort, page, maxPrice, condition } = filters;
+  // Los arrays no son estables entre renders — se serializan para la
+  // dependencia del effect y se vuelven a leer del objeto `filters` actual.
+  const brandsKey = filters.brands?.join(",") ?? "";
 
   const reload = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const result = await listActiveProducts({ categorySlug, search, sort, page });
+      const result = await listActiveProducts({ categorySlug, search, sort, page, maxPrice, condition, brands: filters.brands });
       setItems(result.items);
       setTotal(result.total);
     } catch (err) {
@@ -25,7 +28,8 @@ export function useProducts(filters: ProductFilters) {
     } finally {
       setLoading(false);
     }
-  }, [categorySlug, search, sort, page]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categorySlug, search, sort, page, maxPrice, condition, brandsKey]);
 
   useEffect(() => {
     reload();
