@@ -23,6 +23,19 @@ export function formatPrice(value: number | string): string {
 // silenciosamente para ellos y esconde el mensaje real (el que nombra el
 // producto en los errores del checkout). Se lee `.message` de forma
 // estructural en vez de por tipo, sin reescribirlo.
+// Monograma de 2 letras para categorías sin icono real (diseño/README.md):
+// iniciales de las dos palabras significativas ("Componentes de PC" → CP,
+// filtrando conectores cortos como "de"), o las dos primeras letras si es
+// una sola palabra ("Laptops" → LA).
+export function getMonogram(name: string): string {
+  const words = name.split(/\s+/).filter((word) => word.length > 2 || word === word.toUpperCase())
+  if (words.length >= 2) {
+    return (words[0][0] + words[1][0]).toUpperCase()
+  }
+  const source = words[0] ?? name
+  return source.slice(0, 2).toUpperCase()
+}
+
 export function getErrorMessage(error: unknown, fallback = "Ocurrió un error inesperado."): string {
   if (
     error &&

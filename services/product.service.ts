@@ -41,6 +41,7 @@ export function mapProductRow(row: ProductRowWithRelations, supabase: Client): P
     brand: row.brand,
     condition: row.condition as ProductCondition,
     price: Number(row.price),
+    previous_price: row.previous_price !== null ? Number(row.previous_price) : null,
     stock: row.stock,
     is_active: row.is_active,
     created_at: row.created_at,
@@ -121,6 +122,44 @@ export async function getProductImages(
     .order("position");
   if (error) throw error;
   return data ?? [];
+}
+
+// Productos con previous_price > price, ordenados por % de descuento
+// (mayor primero). Se ordena en memoria: PostgREST no calcula expresiones
+// entre columnas, y son pocas filas con descuento activo a la vez.
+export async function listPriceDrops(limit: number, supabase: Client = createClient()): Promise<Product[]> {
+  const { data, error } = await supabase
+    .from("products")
+    .select(PRODUCT_WITH_RELATIONS_SELECT)
+    .eq("is_active", true)
+    .not("previous_price", "is", null);
+  if (error) throw error;
+
+  const rows = (data ?? []) as unknown as ProductRowWithRelations[];
+  return rows
+    .map((row) => mapProductRow(row, supabase))
+    .filter((product) => product.previous_price !== null && product.previous_price > product.price)
+    .sort((a, b) => {
+      const discountA = (a.previous_price! - a.price) / a.previous_price!;
+      const discountB = (b.previous_price! - b.price) / b.previous_price!;
+      return discountB - discountA;
+    })
+    .slice(0, limit);
+}
+
+// Productos activos con reseñas, mejor calificados primero (panel de
+// reseñas del Home). Todo en memoria por la misma razón que listPriceDrops:
+// el catálogo es chico y PostgREST no ordena por columnas calculadas.
+export async function listTopReviewed(limit: number, supabase: Client = createClient()): Promise<Product[]> {
+  const { data, error } = await supabase.from("products").select(PRODUCT_WITH_RELATIONS_SELECT).eq("is_active", true);
+  if (error) throw error;
+
+  const rows = (data ?? []) as unknown as ProductRowWithRelations[];
+  return rows
+    .map((row) => mapProductRow(row, supabase))
+    .filter((product) => product.review_count > 0)
+    .sort((a, b) => (b.average_rating ?? 0) - (a.average_rating ?? 0) || b.review_count - a.review_count)
+    .slice(0, limit);
 }
 
 // Fire-and-forget en el hook que lo llame: un error aquí no debe romper la UI.

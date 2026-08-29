@@ -3,14 +3,15 @@ import type { ProductCondition } from "@/lib/constants/roles";
 
 export type ProductImage = Database["public"]["Tables"]["product_images"]["Row"];
 
-// `price` llega como string desde PostgREST (columna numeric) — el service
-// la convierte a number antes de exponerla. `image_url` y las métricas de
-// reseñas son campos calculados, no columnas.
+// `price`/`previous_price` llegan como string desde PostgREST (columnas
+// numeric) — el service las convierte a number antes de exponerlas.
+// `image_url` y las métricas de reseñas son campos calculados, no columnas.
 export type Product = Omit<
   Database["public"]["Tables"]["products"]["Row"],
-  "price" | "condition"
+  "price" | "previous_price" | "condition"
 > & {
   price: number;
+  previous_price: number | null;
   condition: ProductCondition;
   image_url: string | null;
   average_rating: number | null;

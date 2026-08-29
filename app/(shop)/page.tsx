@@ -1,52 +1,32 @@
 "use client";
 
-import { Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useProducts } from "@/hooks/useProducts";
-import { ProductGrid } from "@/components/catalog/ProductGrid";
-import { FiltersPanel } from "@/components/catalog/FiltersPanel";
-import { Pagination } from "@/components/catalog/Pagination";
+import { useCategoriesWithCounts } from "@/hooks/useCategoriesWithCounts";
+import { usePriceDrops } from "@/hooks/usePriceDrops";
+import { useTopReviewed } from "@/hooks/useTopReviewed";
+import { useHomeStats } from "@/hooks/useHomeStats";
+import { Hero } from "@/components/home/Hero";
+import { CategoryTiles } from "@/components/home/CategoryTiles";
+import { PriceDropsSection } from "@/components/home/PriceDropsSection";
+import { TrustCards } from "@/components/home/TrustCards";
+import { ReviewsPanel } from "@/components/home/ReviewsPanel";
 import { Container } from "@/components/shared/Container";
-import { LoadingState } from "@/components/shared/LoadingState";
-import { CATALOG_PAGE_SIZE, DEFAULT_SORT, type SortOption } from "@/lib/constants/catalog";
 
-function HomeContent() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const sort = (searchParams.get("sort") as SortOption) || DEFAULT_SORT;
-  const page = Number(searchParams.get("page") ?? "1");
+const PRICE_DROPS_LIMIT = 5;
+const TOP_REVIEWED_LIMIT = 3;
 
-  const { items, total, loading, error, reload } = useProducts({ sort, page });
-  const totalPages = Math.max(1, Math.ceil(total / CATALOG_PAGE_SIZE));
-
-  function updateParams(next: { sort?: SortOption; page?: number }) {
-    const params = new URLSearchParams(searchParams.toString());
-    if (next.sort !== undefined) {
-      params.set("sort", next.sort);
-      params.delete("page");
-    }
-    if (next.page !== undefined) {
-      params.set("page", String(next.page));
-    }
-    router.push(`/?${params.toString()}`);
-  }
-
-  return (
-    <Container className="space-y-6 py-8">
-      <h1 className="text-2xl font-bold">Catálogo</h1>
-      <FiltersPanel sort={sort} onSortChange={(s) => updateParams({ sort: s })} resultCount={total} />
-      <ProductGrid products={items} loading={loading} error={error} onRetry={reload} />
-      <Pagination page={page} totalPages={totalPages} onPageChange={(p) => updateParams({ page: p })} />
-    </Container>
-  );
-}
-
-// useSearchParams exige un límite de Suspense para el build de producción
-// (Next.js necesita poder prerenderizar un fallback estático).
 export default function HomePage() {
+  const stats = useHomeStats();
+  const { categories } = useCategoriesWithCounts();
+  const { products: priceDrops, loading: priceDropsLoading } = usePriceDrops(PRICE_DROPS_LIMIT);
+  const { products: topReviewed } = useTopReviewed(TOP_REVIEWED_LIMIT);
+
   return (
-    <Suspense fallback={<LoadingState message="Cargando catálogo…" />}>
-      <HomeContent />
-    </Suspense>
+    <Container className="space-y-7 py-6">
+      <Hero stats={stats} />
+      {categories.length > 0 && <CategoryTiles categories={categories} />}
+      <PriceDropsSection products={priceDrops} loading={priceDropsLoading} />
+      <TrustCards />
+      <ReviewsPanel products={topReviewed} />
+    </Container>
   );
 }
