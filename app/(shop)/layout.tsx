@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Navbar } from "@/components/layout/Navbar";
 import { Container } from "@/components/shared/Container";
+import { ChatWidget } from "@/components/chat/ChatWidget";
 import { useAuth } from "@/hooks/useAuth";
 import { useCategories } from "@/hooks/useCategories";
 import { useCart } from "@/hooks/useCart";
@@ -33,6 +34,7 @@ export default function ShopLayout({ children }: LayoutProps<"/">) {
       <footer className="border-t py-8 text-center text-sm text-muted-foreground">
         <Container>MercadoTech — laboratorio del curso Claude Code for Developers</Container>
       </footer>
+      <ChatWidget />
     </div>
   );
 }
