@@ -7,9 +7,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-sans: var(--font-ibm-plex-sans);
+  --font-heading: var(--font-manrope);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -46,75 +45,113 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Tokens del sistema de diseño (Fase UX) sin equivalente shadcn directo —
+     ver diseño/README.md. bg/surface/border/text* cubren la escala
+     completa de neutros; brand-* son los verdes fuera del primary/ring. */
+  --color-bg-header: var(--bg-header);
+  --color-bg-footer: var(--bg-footer);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-input: var(--surface-input);
+  --color-surface-quiet: var(--surface-quiet);
+  --color-border-strong: var(--border-strong);
+  --color-border-subtle: var(--border-subtle);
+  --color-divider: var(--divider);
+  --color-divider-quiet: var(--divider-quiet);
+  --color-outline: var(--outline);
+  --color-text-strong: var(--text-strong);
+  --color-text-muted: var(--text-muted);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-text-quiet: var(--text-quiet);
+  --color-text-faint: var(--text-faint);
+  --color-text-dim: var(--text-dim);
+  --color-placeholder: var(--placeholder);
+  --color-img-from: var(--img-from);
+  --color-img-to: var(--img-to);
+  --color-img-label: var(--img-label);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-chart-idle: var(--chart-idle);
+  --color-neutral-badge-bg: var(--neutral-badge-bg);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-tint: var(--brand-tint);
 }
 
-:root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.546 0.245 262.881); /* azul eléctrico — marca MercadoTech */
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.546 0.245 262.881);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
-
+/* Un solo tema (oscuro) — diseño/README.md no define modo claro; .dark se
+   mantiene como selector porque ThemeProvider fuerza next-themes a "dark"
+   (algunos primitivos de shadcn, como el Toaster, leen el tema por hook). */
+:root,
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.623 0.222 262.881); /* azul eléctrico, aclarado para contraste sobre fondo oscuro */
-  --primary-foreground: oklch(0.145 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.623 0.222 262.881);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: #0b0d10;
+  --foreground: #e6e9ed;
+  --bg-header: #101318;
+  --bg-footer: #08090b;
+  --card: #12161c;
+  --card-foreground: #e6e9ed;
+  --surface: #12161c;
+  --surface-raised: #171c23;
+  --surface-input: #161a20;
+  --surface-quiet: #1a1f27;
+  --popover: #171c23;
+  --popover-foreground: #e6e9ed;
+  /* Verde de marca como acción primaria — el texto sobre este verde SIEMPRE
+     es --background (#0B0D10), nunca blanco. */
+  --primary: #98ca3f;
+  --primary-foreground: #0b0d10;
+  --brand: #98ca3f;
+  --brand-hover: #b4e05c;
+  --brand-soft: rgba(152, 202, 63, 0.13);
+  --brand-tint: rgba(152, 202, 63, 0.08);
+  --secondary: #1a1f27;
+  --secondary-foreground: #e6e9ed;
+  --muted: #171c23;
+  --muted-foreground: #9aa3b1;
+  /* --accent aquí es el resalte neutro de shadcn (hover de menús/selects),
+     NO el verde de marca — ese es --brand / --primary. */
+  --accent: #1a1f27;
+  --accent-foreground: #e6e9ed;
+  --destructive: #e5484d;
+  --danger: #e5484d;
+  --warning: #d9a441;
+  --border: #232a34;
+  --border-strong: #2a303a;
+  --border-subtle: #212730;
+  --divider: #1e242c;
+  --divider-quiet: #1b2028;
+  --outline: #38414f;
+  --input: #161a20;
+  --ring: #98ca3f;
+  --text-strong: #ffffff;
+  --text-muted: #d5dae2;
+  --text-secondary: #c1c6ce;
+  --text-tertiary: #9aa3b1;
+  --text-quiet: #8a93a3;
+  --text-faint: #6e7787;
+  --text-dim: #5f6878;
+  --placeholder: #5a6270;
+  --img-from: #1a1f27;
+  --img-to: #232b36;
+  --img-label: #495261;
+  --chart-idle: #2a3340;
+  --neutral-badge-bg: #1e242c;
+  --chart-1: #98ca3f;
+  --chart-2: #9aa3b1;
+  --chart-3: #6e7787;
+  --chart-4: #2a3340;
+  --chart-5: #1a1f27;
+  --radius: 0.5rem;
+  --sidebar: #101318;
+  --sidebar-foreground: #e6e9ed;
+  --sidebar-primary: #98ca3f;
+  --sidebar-primary-foreground: #0b0d10;
+  --sidebar-accent: #1a1f27;
+  --sidebar-accent-foreground: #e6e9ed;
+  --sidebar-border: #212730;
+  --sidebar-ring: #98ca3f;
 }
 
 @layer base {
@@ -126,5 +163,13 @@
   }
   html {
     @apply font-sans;
+  }
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-heading text-text-strong;
   }
 }

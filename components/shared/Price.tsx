@@ -7,5 +7,5 @@ interface PriceProps {
 }
 
 export function Price({ value, className }: PriceProps) {
-  return <span className={cn("font-semibold tabular-nums", className)}>{formatPrice(value)}</span>;
+  return <span className={cn("font-heading font-extrabold tabular-nums text-text-strong", className)}>{formatPrice(value)}</span>;
 }
