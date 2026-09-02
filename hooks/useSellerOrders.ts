@@ -7,7 +7,9 @@ import { ORDER_STATUS_FLOW } from "@/lib/constants/orders";
 import type { OrderStatus } from "@/lib/constants/roles";
 import type { SellerOrderView } from "@/types/order";
 
-function canAdvance(from: OrderStatus, to: OrderStatus): boolean {
+// Exportado para poder testearlo sin React (Sesión 6, Fase 6.3) — cero
+// cambios de lógica.
+export function canAdvance(from: OrderStatus, to: OrderStatus): boolean {
   return ORDER_STATUS_FLOW.indexOf(to) === ORDER_STATUS_FLOW.indexOf(from) + 1;
 }
 
