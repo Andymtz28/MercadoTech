@@ -17,7 +17,7 @@ export function ProductGallery({ images, imageUrls, title }: ProductGalleryProps
   if (imageUrls.length === 0) {
     return (
       <div className="relative aspect-square overflow-hidden rounded-lg border bg-muted">
-        <ProductImage src={null} alt={title} />
+        <ProductImage src={null} alt={title} sizes="(min-width: 768px) 50vw, 100vw" />
       </div>
     );
   }
@@ -25,7 +25,7 @@ export function ProductGallery({ images, imageUrls, title }: ProductGalleryProps
   return (
     <div className="space-y-3">
       <div className="relative aspect-square overflow-hidden rounded-lg border bg-muted">
-        <ProductImage src={imageUrls[selected]} alt={title} />
+        <ProductImage src={imageUrls[selected]} alt={title} sizes="(min-width: 768px) 50vw, 100vw" />
       </div>
       {imageUrls.length > 1 && (
         <div className="flex gap-2" role="tablist" aria-label="Imágenes del producto">
@@ -42,7 +42,7 @@ export function ProductGallery({ images, imageUrls, title }: ProductGalleryProps
                 index === selected ? "border-primary" : "border-transparent",
               )}
             >
-              <ProductImage src={url} alt="" fill />
+              <ProductImage src={url} alt="" fill sizes="64px" />
             </button>
           ))}
         </div>

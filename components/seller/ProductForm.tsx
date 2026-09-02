@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +13,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { SortableImageGallery } from "@/components/seller/SortableImageGallery";
+import { LoadingState } from "@/components/shared/LoadingState";
+
+// dnd-kit (reordenar imágenes por arrastre) solo se necesita en /vendedor/
+// publicar y /vendedor/productos/[id]/editar — sacarlo del bundle común de
+// esas páginas (Fase 7.2, medido en docs/PERFORMANCE.md).
+const SortableImageGallery = dynamic(
+  () => import("@/components/seller/SortableImageGallery").then((m) => m.SortableImageGallery),
+  { ssr: false, loading: () => <LoadingState message="Cargando imágenes…" /> },
+);
 import { validateProductForm, type ProductFormInput } from "@/lib/validators/product";
 import type { FieldErrors } from "@/lib/validators/auth";
 import { PRODUCT_CONDITIONS } from "@/lib/constants/roles";

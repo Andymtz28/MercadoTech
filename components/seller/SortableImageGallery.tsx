@@ -40,7 +40,7 @@ function SortableThumb({ image, onRemove }: { image: GalleryImage; onRemove: () 
       className="relative size-24 shrink-0 overflow-hidden rounded-md border bg-muted"
       aria-roledescription="imagen ordenable"
     >
-      <ProductImage src={image.publicUrl} alt="" fill />
+      <ProductImage src={image.publicUrl} alt="" fill sizes="96px" />
       <button
         type="button"
         {...attributes}

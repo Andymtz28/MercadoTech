@@ -17,9 +17,11 @@ interface ProductCardProps {
   compareChecked?: boolean;
   onCompareChange?: (checked: boolean) => void;
   onAddToCart?: () => void;
+  // Solo la primera tarjeta above-the-fold del Home la pasa en true (Fase 7.2).
+  priority?: boolean;
 }
 
-export function ProductCard({ product, similarity, compareChecked, onCompareChange, onAddToCart }: ProductCardProps) {
+export function ProductCard({ product, similarity, compareChecked, onCompareChange, onAddToCart, priority }: ProductCardProps) {
   const hasDiscount = product.previous_price !== null && product.previous_price > product.price;
   const discountPercent = hasDiscount ? Math.round((1 - product.price / product.previous_price!) * 100) : null;
   const showFooter = onCompareChange !== undefined || onAddToCart !== undefined;
@@ -28,7 +30,12 @@ export function ProductCard({ product, similarity, compareChecked, onCompareChan
     <Card data-testid="product-card" data-product-id={product.id} className="h-full overflow-hidden py-0 transition-shadow hover:shadow-md">
       <Link href={`/producto/${product.id}`} className="block">
         <div className="relative aspect-square bg-muted">
-          <ProductImage src={product.image_url} alt={product.title} />
+          <ProductImage
+            src={product.image_url}
+            alt={product.title}
+            sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+            priority={priority}
+          />
           {discountPercent !== null && <Badge className="absolute top-2 left-2">-{discountPercent}%</Badge>}
           {similarity !== undefined && (
             <Badge className="absolute top-2 right-2" variant="secondary">

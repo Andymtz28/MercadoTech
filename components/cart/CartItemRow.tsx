@@ -29,7 +29,7 @@ export function CartItemRow({ item, onQuantityChange, onRemove }: CartItemRowPro
   return (
     <div data-testid="cart-item" data-product-id={product.id} className="flex items-center gap-4 border-b py-4 last:border-b-0">
       <div className="relative size-20 shrink-0 overflow-hidden rounded-md border bg-muted">
-        <ProductImage src={product.imageUrl} alt={product.title} />
+        <ProductImage src={product.imageUrl} alt={product.title} sizes="80px" />
       </div>
 
       <div className="min-w-0 flex-1 space-y-1">

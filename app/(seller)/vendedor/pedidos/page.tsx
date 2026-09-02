@@ -1,14 +1,22 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { useSellerOrders } from "@/hooks/useSellerOrders";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { ErrorState } from "@/components/shared/ErrorState";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { OrdersKanban } from "@/components/seller/OrdersKanban";
 import { getErrorMessage } from "@/lib/utils";
 import type { OrderStatus } from "@/lib/constants/roles";
+
+// dnd-kit (arrastre por teclado y mouse) solo se necesita en esta página —
+// sacarlo del bundle común de /vendedor/pedidos (Fase 7.2, medido en
+// docs/PERFORMANCE.md).
+const OrdersKanban = dynamic(
+  () => import("@/components/seller/OrdersKanban").then((m) => m.OrdersKanban),
+  { ssr: false, loading: () => <LoadingState message="Cargando tablero…" /> },
+);
 
 export default function SellerOrdersPage() {
   const { user } = useAuth();

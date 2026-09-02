@@ -15,7 +15,7 @@ export function PriceDropsSection({ products, loading }: PriceDropsSectionProps)
         <h2 className="text-lg font-bold text-text-strong">Bajaron de precio esta semana</h2>
         <p className="text-xs text-text-faint">Seguimiento de 90 días</p>
       </div>
-      <ProductGrid products={products} loading={loading} />
+      <ProductGrid products={products} loading={loading} prioritizeFirst />
     </section>
   );
 }

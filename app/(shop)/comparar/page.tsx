@@ -71,7 +71,7 @@ function CompareContent() {
           {products.map((product) => (
             <div key={product.id} className="space-y-2 text-center">
               <div className="relative mx-auto aspect-square w-[110px] overflow-hidden rounded-lg bg-muted">
-                <ProductImage src={product.image_url} alt={product.title} />
+                <ProductImage src={product.image_url} alt={product.title} sizes="110px" />
               </div>
               <p className="line-clamp-2 min-h-[2.5em] text-[13.5px] font-medium">{product.title}</p>
               <Price value={product.price} className="text-lg text-primary" />

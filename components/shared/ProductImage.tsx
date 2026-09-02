@@ -13,9 +13,10 @@ interface ProductImageProps {
   fill?: boolean;
   width?: number;
   height?: number;
+  priority?: boolean;
 }
 
-export function ProductImage({ src, alt, className, sizes, fill = true, width, height }: ProductImageProps) {
+export function ProductImage({ src, alt, className, sizes, fill = true, width, height, priority }: ProductImageProps) {
   const [failed, setFailed] = useState(false);
 
   if (!src || failed) {
@@ -41,6 +42,7 @@ export function ProductImage({ src, alt, className, sizes, fill = true, width, h
       width={fill ? undefined : width}
       height={fill ? undefined : height}
       sizes={sizes}
+      priority={priority}
       className={cn("object-cover", className)}
       onError={() => setFailed(true)}
     />

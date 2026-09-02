@@ -20,6 +20,9 @@ interface ProductGridProps {
   compareIds?: string[];
   onCompareChange?: (productId: string, checked: boolean) => void;
   onAddToCart?: (productId: string) => void;
+  // La sección "Bajaron de precio" del Home la pasa en true: su primera
+  // tarjeta es el LCP de la página (Fase 7.2, medido en docs/PERFORMANCE.md).
+  prioritizeFirst?: boolean;
 }
 
 export function ProductGrid({
@@ -35,6 +38,7 @@ export function ProductGrid({
   compareIds,
   onCompareChange,
   onAddToCart,
+  prioritizeFirst = false,
 }: ProductGridProps) {
   if (error) {
     return <ErrorState message={error} onRetry={onRetry} />;
@@ -63,7 +67,7 @@ export function ProductGrid({
 
   return (
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-      {products.map((product) => (
+      {products.map((product, index) => (
         <ProductCard
           key={product.id}
           product={product}
@@ -71,6 +75,7 @@ export function ProductGrid({
           compareChecked={compareIds?.includes(product.id)}
           onCompareChange={onCompareChange ? (checked) => onCompareChange(product.id, checked) : undefined}
           onAddToCart={onAddToCart ? () => onAddToCart(product.id) : undefined}
+          priority={prioritizeFirst && index === 0}
         />
       ))}
     </div>
