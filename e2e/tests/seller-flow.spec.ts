@@ -66,6 +66,11 @@ test.describe("Flujo vendedor", () => {
     });
 
     await test.step("el comprador de ese pedido ve 'enviado' en su detalle", async () => {
+      // El panel de vendedor ((seller)/layout.tsx) usa SellerSidebar, no
+      // Navbar — no hay botón "Menú de..." en /vendedor/pedidos. Hay que
+      // volver a una página de la tienda (donde SÍ vive el navbar) antes de
+      // poder cerrar sesión por ahí.
+      await page.goto("/");
       await page.getByRole("button", { name: /Menú de/ }).click();
       await page.getByRole("menuitem", { name: "Cerrar sesión" }).click();
 

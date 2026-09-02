@@ -276,6 +276,25 @@ proyecto remoto y confirmando que aparece en `/categoria/audio` (limpiado
 después con `DELETE` directo — el `window.confirm()` nativo de "Eliminar"
 no se puede automatizar desde este navegador).
 
+**Corrida #5 (`96fae46`, con los problemas 6-8):** job `checks` verde;
+job `e2e` bajó a **1** test rojo — confirma los problemas 6 y 7 (los más
+graves de la sesión) y deja ver un último problema, distinto:
+
+**Problema 9 (test, corregido) — el panel de vendedor no tiene navbar:**
+El último paso de `seller-flow.spec.ts` (cerrar sesión como vendedor,
+entrar como comprador, ver el pedido "Enviado") colgaba 30s buscando el
+botón "Menú de..." — pero `app/(seller)/layout.tsx` usa `SellerSidebar`,
+NO `Navbar`/`UserMenu`: ese botón simplemente no existe en
+`/vendedor/pedidos` (ni en ninguna otra ruta de `/vendedor/*`). Otro caso
+de la Fase 6.6 asumiendo que el navbar estaba en todas las páginas sin
+verificarlo. Corregido con `page.goto("/")` antes de abrir el menú —
+mismo patrón que ya usa `SellerSidebar` con su propio link "Volver a la
+tienda".
+
+Con las 9 correcciones de esta fase, las 24 pruebas E2E (8 × 3
+navegadores) deberían pasar en la próxima corrida de CI — confirmar en
+la pestaña Actions antes de dar la Fase 6.7 (y la sesión) por cerrada.
+
 ### Fase 6.8 — Debugging y gate de validación (commit `828d80c`)
 
 **Construido:** `docs/DEBUGGING.md` (flujo síntoma→reproducir→logs→
