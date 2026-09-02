@@ -21,6 +21,8 @@ export function OrderKanbanCard({ order }: OrderKanbanCardProps) {
       ref={setNodeRef}
       {...attributes}
       {...listeners}
+      data-testid="kanban-card"
+      data-order-id={order.id}
       style={{ transform: CSS.Translate.toString(transform), opacity: isDragging ? 0.5 : 1 }}
       className="cursor-grab touch-none py-3 active:cursor-grabbing"
       role="button"

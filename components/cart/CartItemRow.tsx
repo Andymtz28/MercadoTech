@@ -27,7 +27,7 @@ export function CartItemRow({ item, onQuantityChange, onRemove }: CartItemRowPro
   const atStockLimit = item.quantity >= product.stock;
 
   return (
-    <div className="flex items-center gap-4 border-b py-4 last:border-b-0">
+    <div data-testid="cart-item" data-product-id={product.id} className="flex items-center gap-4 border-b py-4 last:border-b-0">
       <div className="relative size-20 shrink-0 overflow-hidden rounded-md border bg-muted">
         <ProductImage src={product.imageUrl} alt={product.title} />
       </div>
@@ -49,7 +49,7 @@ export function CartItemRow({ item, onQuantityChange, onRemove }: CartItemRowPro
         >
           <Minus className="size-3.5" aria-hidden="true" />
         </Button>
-        <span className="w-8 text-center text-sm" aria-live="polite">
+        <span data-testid="cart-item-quantity" className="w-8 text-center text-sm" aria-live="polite">
           {item.quantity}
         </span>
         <Button

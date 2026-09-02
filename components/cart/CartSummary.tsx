@@ -15,9 +15,9 @@ export function CartSummary({ subtotal, itemCount, onCheckout, checkingOut }: Ca
         <span className="text-sm text-muted-foreground">
           Subtotal ({itemCount} {itemCount === 1 ? "producto" : "productos"})
         </span>
-        <Price value={subtotal} className="text-lg" />
+        <Price data-testid="cart-subtotal" value={subtotal} className="text-lg" />
       </div>
-      <Button className="w-full" disabled={itemCount === 0 || checkingOut} onClick={onCheckout}>
+      <Button data-testid="checkout-button" className="w-full" disabled={itemCount === 0 || checkingOut} onClick={onCheckout}>
         {checkingOut ? "Procesando…" : "Comprar"}
       </Button>
       <p className="text-xs text-muted-foreground">

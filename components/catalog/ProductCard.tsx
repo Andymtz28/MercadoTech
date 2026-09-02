@@ -25,7 +25,7 @@ export function ProductCard({ product, similarity, compareChecked, onCompareChan
   const showFooter = onCompareChange !== undefined || onAddToCart !== undefined;
 
   return (
-    <Card className="h-full overflow-hidden py-0 transition-shadow hover:shadow-md">
+    <Card data-testid="product-card" data-product-id={product.id} className="h-full overflow-hidden py-0 transition-shadow hover:shadow-md">
       <Link href={`/producto/${product.id}`} className="block">
         <div className="relative aspect-square bg-muted">
           <ProductImage src={product.image_url} alt={product.title} />

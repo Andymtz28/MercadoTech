@@ -28,6 +28,7 @@ function Column({ status, orders }: { status: OrderStatus; orders: SellerOrderVi
   return (
     <div
       ref={setNodeRef}
+      data-testid={`kanban-column-${status}`}
       className={`flex w-64 shrink-0 flex-col gap-2 rounded-lg border p-3 ${isOver ? "bg-muted" : ""}`}
     >
       <p className="text-sm font-semibold">

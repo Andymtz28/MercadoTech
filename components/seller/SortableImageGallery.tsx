@@ -104,6 +104,7 @@ export function SortableImageGallery({ images, onReorder, onAdd, onRemove }: Sor
       <input
         ref={inputRef}
         type="file"
+        data-testid="product-image-input"
         accept="image/jpeg,image/png,image/webp,image/gif"
         className="hidden"
         onChange={(e) => {
