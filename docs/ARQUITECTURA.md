@@ -1,9 +1,11 @@
 # Arquitectura de MercadoTech
 
-Este documento describe la infraestructura construida en la Sesión 2:
-proyecto Next.js 15, base de datos con integridad referencial, RLS en todas
-las tablas, Storage y datos de prueba. No incluye pantallas ni lógica de
-negocio (eso corresponde a las sesiones 3 en adelante).
+Las secciones 1-10 describen la infraestructura construida en la Sesión 2
+(base de datos, RLS, Storage) — siguen siendo la fuente de verdad del
+esquema y no se reescriben aquí. Las secciones 11+ agregan las capas que se
+construyeron después (frontend, RAG, testing/CI, deploy) — documentan lo
+que el código REALMENTE tiene hoy, no lo que el plan original de cada
+sesión asumía.
 
 ## 1. Arquitectura general y capas
 
@@ -235,8 +237,115 @@ policy sea correcta (lección de ReadHub).
 
 ## 10. Estado conocido / próximos pasos
 
-- `seed.sql` referencia rutas de imágenes en Storage que **no existen como
-  archivos reales** hasta que se suban desde la UI (sesión 3) — documentado
-  también dentro del propio `seed.sql`.
-- No hay pantallas, hooks de negocio ni Route Handlers todavía: eso es
-  exactamente el alcance de la sesión 3.
+- `seed.sql` referencia rutas de imágenes en Storage que no existían como
+  archivos reales hasta que se subieron desde la UI (sesión 3) o, para el
+  catálogo de producción, por script (ver §14).
+- Las secciones 11-14 cubren lo construido después de la sesión 2.
+
+## 11. Frontend (Sesión 3)
+
+Mapa de rutas real (`app/`):
+
+```
+(auth)/   login, register
+(shop)/   / (Home), /categoria/[slug], /buscar, /producto/[id], /favoritos,
+          /carrito, /pedidos, /pedidos/[id], /comparar
+(seller)/ /vendedor/productos, /vendedor/publicar,
+          /vendedor/productos/[id]/editar, /vendedor/pedidos
+```
+
+`(shop)/layout.tsx` monta `Navbar` (con `UserMenu`, `CartIndicator`,
+`CategoriesMenu`) y `ChatWidget`; `(seller)/layout.tsx` monta
+`SellerSidebar` en su lugar — **no comparten navbar**, algo que costó un
+bug real de E2E hasta que se verificó (BITACORA, Sesión 6, problema 9: no
+hay botón "Menú de..." en ninguna ruta `/vendedor/*`).
+
+El Home fue rediseñado por completo antes de la Sesión 6 (commits
+`d5220af`/`d9d0543`/`bd8ae49` — tema oscuro, tipografía Manrope/IBM Plex
+Sans, verde de marca) y **ya no lista todo el catálogo**: solo muestra dos
+secciones curadas, "Bajaron de precio esta semana" (`previous_price` no
+nulo) y "Mejor calificados" (productos con reseñas). El catálogo completo
+navegable vive en `/categoria/[slug]` y `/buscar`.
+
+Kanban de pedidos del vendedor: `@dnd-kit/core` con `PointerSensor` +
+`KeyboardSensor` (foco en el asa → `Space` levanta → flechas mueve → `Space`
+suelta) — el camino de teclado es el que se usa en los tests E2E, no el
+mouse (BITACORA, Sesión 6, decisión 9).
+
+## 12. RAG / IA conversacional (Sesión 4)
+
+```mermaid
+flowchart LR
+  U[Usuario] -->|pregunta| CW[ChatWidget]
+  CW --> API["/api/v1/chat"]
+  API --> EMB["lib/ai/embeddings.ts<br/>genera embedding de la pregunta"]
+  EMB --> MATCH["match_knowledge()<br/>similitud coseno en pgvector"]
+  MATCH --> CTX["lib/ai/context-builder.ts<br/>arma el contexto con presupuesto de caracteres"]
+  CTX --> COMP["lib/ai/completion.ts<br/>llama al modelo de chat"]
+  COMP --> CW
+```
+
+* `knowledge_embeddings` (pgvector, `vector(384)`, índice HNSW) guarda
+  chunks de `products` y `support_articles`, discriminados por
+  `source_type`. Cambiar de modelo de embeddings exige migrar la dimensión
+  de la columna — no basta con cambiar la variable de entorno (comentario
+  en la migración `20260101000022`).
+* `lib/ai/` es el ÚNICO lugar que conoce la API de Hugging Face
+  (`@huggingface/inference`, `featureExtraction` para embeddings — el
+  router OpenAI-compatible de HF no soporta `feature-extraction`).
+  Verificado (Fase 7.2, `docs/PERFORMANCE.md`): ningún componente cliente
+  lo importa, ni siquiera con `import type`.
+  Se llama solo desde `app/api/v1/chat` — nunca desde el navegador
+  directo, porque `HUGGINGFACEHUB_API_TOKEN` es secreta (§ variables en
+  `docs/DEPLOY.md`).
+* Indexación automática: trigger de Postgres + `app/api/v1/reindex` +
+  `scripts/index-all.ts` para una corrida manual completa.
+* Dos modos de chat (`ChatMode`): `compras` (recomienda productos) y
+  `soporte` (responde con la FAQ) — mismo componente `ChatWidget`, dos
+  system prompts distintos en `lib/ai/prompts.ts`.
+
+## 13. Testing y CI (Sesión 6)
+
+* Unitarios (Vitest, `environment: "node"`): `services/*.test.ts` inyectan
+  el `SupabaseClient` por parámetro — nunca `vi.mock` de `lib/supabase/*`;
+  `lib/ai/*` es la única excepción mockeada por módulo. 204 tests, 21
+  archivos.
+* E2E (Playwright, 24 tests = 8 specs × 3 navegadores): Page Objects en
+  `e2e/pages/`, fixtures de login en `e2e/fixtures/test.ts`. Requieren
+  `supabase start && supabase db reset` — nunca corren contra el proyecto
+  remoto.
+* CI (`.github/workflows/ci.yml`): job `checks` (lint + type-check + tests,
+  ~40 s) y job `e2e` (Supabase efímero + Playwright chromium, ~4 min), sin
+  ningún secreto — las claves del stack local no protegen nada real. Ambos
+  son *required status checks* del ruleset de `main` (§ `docs/DEPLOY.md`).
+* Sesión 6 encontró y corrigió 2 bugs reales de producción invisibles hasta
+  entonces (el menú de usuario rompía con un Runtime Error de Base UI, y
+  "Cerrar sesión" no ejecutaba nada por un `onSelect`/`onClick` mal usado)
+  — detalle completo en `docs/BITACORA.md`.
+
+**Nota:** el plan maestro original preveía una "Sesión 5" (Skills de
+gobernanza + servidor MCP) entre la 4 y la 6. Verificado contra el
+historial real de este repo: **esa sesión nunca se ejecutó aquí** — no
+existe carpeta `mcp/`, y las únicas Skills reales son `analista-negocio`,
+`planificacion-por-fases` y `web-scraping` (ninguna relacionada con
+gobernanza del propio proyecto). Se documenta la ausencia en vez de
+inventar contenido para una fase que no ocurrió.
+
+## 14. Despliegue (Sesión 7)
+
+* **Producción:** `https://mercadotech-kohl.vercel.app`, desplegada desde
+  GitHub por la integración nativa de Vercel (sin CLI, sin tokens en
+  Actions) — cada push a `main` redespliega producción; cada PR levanta un
+  preview con URL propia.
+* **Base de datos:** el mismo proyecto Supabase de desarrollo
+  (`uuvgafxscvukrlzirmao`) sirve también producción — decisión consciente
+  documentada en `docs/DEPLOY.md` §2 (desviación de la spec original, que
+  asumía un proyecto separado con seed mínimo).
+* **Secretos:** cargados a mano en el dashboard de Vercel, nunca en el
+  repo ni en GitHub Actions — tabla completa de qué variable vive dónde en
+  `docs/DEPLOY.md` §1.
+* **Candado de merge:** ruleset de GitHub sobre `main` exige PR +
+  `checks`/`e2e` en verde antes de poder mergear (`docs/DEPLOY.md` §2).
+* Performance: `docs/PERFORMANCE.md` — bundle medido con `next build`
+  (Turbopack, sin bundle-analyzer), 3 `dynamic import` aplicados con
+  medición antes/después.
