@@ -1,0 +1,132 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: checks (lint, type-check, unit tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Node 22 LTS — la misma major que generó el lockfile localmente
+          # (v22.16.0). El plan original sugería Node 24; se usa 22 para no
+          # introducir una diferencia de entorno sin necesidad real.
+          node-version: 22
+          cache: npm
+
+      # Lección de ReadHub (decisión 10): pinnear la MISMA versión exacta de
+      # npm que generó package-lock.json localmente. Un npm más nuevo en el
+      # runner resuelve las dependencias opcionales (esbuild, etc.) distinto
+      # y falla con "Missing from lock file" aunque el lockfile sea válido.
+      - name: Pin npm to the version that generated package-lock.json
+        run: npm install -g npm@10.9.2
+
+      - run: npm ci
+      - run: npm run type-check
+      - run: npm run lint
+      - run: npm run test:coverage
+
+      # No hay carpeta mcp/ en este repo (la "Sesión 5" del plan maestro,
+      # que la habría creado, no se ejecutó aquí) — el paso de type-check
+      # del MCP que pedía la spec original se omite.
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
+
+  e2e:
+    name: e2e (Playwright + Supabase local)
+    needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Pin npm to the version that generated package-lock.json
+        run: npm install -g npm@10.9.2
+
+      - run: npm ci
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      # Solo chromium en CI (los 3 navegadores quedan para correr local,
+      # donde sí hay tiempo/recursos de sobra).
+      - name: Install Playwright chromium
+        run: npx playwright install --with-deps chromium
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start local Supabase stack
+        run: supabase start
+
+      - name: Reset database (migrations + seed)
+        run: supabase db reset
+
+      # Las claves del stack LOCAL son las mismas para cualquier instancia
+      # de `supabase start` en cualquier máquina — no protegen nada remoto,
+      # así que no son secretos (decisión 11): se leen dinámicamente en vez
+      # de guardarlas como GitHub Secret.
+      - name: Read local Supabase credentials
+        id: supabase
+        run: |
+          STATUS=$(supabase status -o json)
+          echo "api_url=$(echo "$STATUS" | jq -r '.API_URL')" >> "$GITHUB_OUTPUT"
+          echo "anon_key=$(echo "$STATUS" | jq -r '.ANON_KEY')" >> "$GITHUB_OUTPUT"
+          echo "service_role_key=$(echo "$STATUS" | jq -r '.SERVICE_ROLE_KEY')" >> "$GITHUB_OUTPUT"
+
+      # playwright.config.ts hace `npm run build && npm run start` en CI
+      # (decisión 12: paridad con producción, no `next dev`) — Next.js lee
+      # estas env vars en build time.
+      - name: Run Playwright E2E (chromium)
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ steps.supabase.outputs.api_url }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ steps.supabase.outputs.anon_key }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ steps.supabase.outputs.service_role_key }}
+          NEXT_PUBLIC_SITE_URL: http://localhost:3000
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
+          CI: true
+        run: npx playwright test --project=chromium
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+
+      - name: Stop local Supabase stack
+        if: always()
+        run: supabase stop
