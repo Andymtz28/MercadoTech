@@ -231,6 +231,51 @@ se aplicó con `db push` (nunca hubo un reset completo ahí). Corregido
 repitiendo los mismos 5 `UPDATE` al final de `seed.sql` (idempotente,
 mismos IDs/valores) para que un reset limpio quede igual que el remoto.
 
+**Corrida #4 (`a87716c`, con los 5 problemas de arriba):** job `checks`
+verde; job `e2e` bajó de 7 a **2** tests rojos — confirma que los
+diagnósticos de arriba eran correctos. Los 2 que quedaron llevaron a dos
+bugs REALES de producción más, encontrados igual por Playwright:
+
+**Problema 6 (grave, corregido) — el menú de usuario estaba roto para
+TODOS los usuarios:** `logout → navbar anónimo` colgaba 30s esperando el
+ítem "Cerrar sesión". Reproducido localmente (dev server contra el
+proyecto remoto): al abrir el menú, Next.js mostraba un Runtime Error de
+Base UI — `MenuGroupContext is missing. Menu group parts must be used
+within <Menu.Group> or <Menu.RadioGroup>` — porque `UserMenu.tsx` usaba
+`DropdownMenuLabel` (que internamente es `Menu.GroupLabel`) SIN envolverlo
+en `DropdownMenuGroup`, un requisito de Base UI que Radix no tiene. El
+crash rompía TODO el contenido del menú, no solo el label. Nadie lo había
+notado porque ninguna prueba manual anterior había abierto el menú de
+usuario. Corregido envolviendo el label en `DropdownMenuGroup`.
+
+**Problema 7 (grave, corregido) — "Cerrar sesión" nunca cerraba la
+sesión:** con el crash de arriba resuelto, el menú abría bien pero el
+clic en "Cerrar sesión" no hacía nada — la sesión seguía activa. Causa:
+`DropdownMenuItem onSelect={onLogout}` usa `onSelect`, que en Base UI
+`Menu.Item` NO es un evento de selección de ítem (como en Radix) sino el
+evento nativo de HTML para selección de TEXTO — nunca se dispara en un
+`<div>` no editable, así que `onLogout` jamás se ejecutaba. TypeScript no
+lo marcó porque `onSelect` es una prop válida de `HTMLAttributes`, solo
+que la equivocada. Corregido cambiando a `onClick={onLogout}` (la prop
+real de `Menu.Item`). Este bug significa que, en producción, ningún
+usuario podía cerrar sesión desde el menú del navbar antes de este fix.
+
+**Problema 8 (test, corregido) — `CatalogPage.goto()` apunta al Home
+rediseñado, no a un catálogo:** `seller-flow.spec.ts` publicaba un
+producto y luego no lo encontraba en "el catálogo público". Causa: la
+Fase 6.4 escribió `CatalogPage.goto()` como `page.goto("/")` asumiendo
+(sin verificar) que el Home listaba todo el catálogo — cierto en la
+Sesión 3, pero el rediseño de UX (anterior a esta sesión, commit
+`d9d0543`) reemplazó esa lista por las secciones curadas "Bajaron de
+precio" y "Mejor calificados", que un producto recién publicado nunca
+integra (sin `previous_price` ni reseñas). `buyer-flow.spec.ts` no sufría
+esto porque ya filtraba por categoría antes de buscar el producto.
+Corregido agregando el mismo `catalog.filterByCategory("Audio")` en
+`seller-flow.spec.ts`, verificado publicando un producto real contra el
+proyecto remoto y confirmando que aparece en `/categoria/audio` (limpiado
+después con `DELETE` directo — el `window.confirm()` nativo de "Eliminar"
+no se puede automatizar desde este navegador).
+
 ### Fase 6.8 — Debugging y gate de validación (commit `828d80c`)
 
 **Construido:** `docs/DEBUGGING.md` (flujo síntoma→reproducir→logs→

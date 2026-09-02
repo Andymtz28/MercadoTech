@@ -38,7 +38,14 @@ test.describe("Flujo vendedor", () => {
       await sellerProducts.goto();
       await expect(sellerProducts.rowByTitle(uniqueTitle)).toBeVisible();
 
+      // catalog.goto() aterriza en el Home rediseñado (Fase UX post-Sesión 4):
+      // ya no lista todo el catálogo, solo "Bajaron de precio" y "Mejor
+      // calificados" — un producto recién publicado (sin previous_price ni
+      // reseñas) nunca aparece ahí. El catálogo real de una categoría vive
+      // en /categoria/[slug], al que se llega filtrando (igual que hace
+      // buyer-flow.spec.ts, que sí encuentra productos existentes por esta vía).
       await catalog.goto();
+      await catalog.filterByCategory("Audio");
       await expect(page.getByText(uniqueTitle)).toBeVisible();
     });
 

@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -54,7 +55,12 @@ export function UserMenu({ user, onLogout }: UserMenuProps) {
         }
       />
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel className="truncate">{label}</DropdownMenuLabel>
+        {/* MenuPrimitive.GroupLabel (Base UI) exige un <Menu.Group> ancestro
+            — sin este wrapper, Base UI lanza "MenuGroupContext is missing"
+            y rompe TODO el contenido del menú (encontrado por Playwright). */}
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="truncate">{label}</DropdownMenuLabel>
+        </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem render={<Link href="/pedidos" />}>
           <Package /> Mis pedidos
@@ -68,7 +74,10 @@ export function UserMenu({ user, onLogout }: UserMenuProps) {
           </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={onLogout} variant="destructive">
+        {/* Base UI Menu.Item usa onClick, no onSelect (eso es un evento real
+            de HTMLAttributes para selección de texto, nunca dispara aquí) —
+            "Cerrar sesión" cerraba el menú sin ejecutar el logout. */}
+        <DropdownMenuItem onClick={onLogout} variant="destructive">
           <LogOut /> Cerrar sesión
         </DropdownMenuItem>
       </DropdownMenuContent>
