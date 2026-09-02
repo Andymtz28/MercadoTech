@@ -40,6 +40,10 @@ yarn-error.log*
 # vercel
 .vercel
 
+# supabase CLI (caché local de `login`/`link`: versión, project ref,
+# pooler-url — nada secreto, pero es estado de ESTA máquina, no del repo)
+/supabase/.temp
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
