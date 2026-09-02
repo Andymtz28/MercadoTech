@@ -13,7 +13,10 @@ npm run dev          # servidor de desarrollo (Turbopack)
 npm run build        # build de producción
 npm run start         # sirve el build de producción
 npm run lint           # ESLint
-npm run type-check       # tsc --noEmit
+npm run type-check       # next typegen && tsc --noEmit
+npm run test           # Vitest (unit — services, hooks, lib/ai)
+npm run test:coverage    # Vitest con reporte de cobertura (v8)
+npm run test:e2e          # Playwright (requiere stack de Supabase local arriba)
 npm run db:types          # regenera types/database.ts (proyecto REMOTO, --project-id)
 ```
 
@@ -72,6 +75,23 @@ para no chocar con `/pedidos` del comprador. Middleware protege `/carrito`,
   los use necesita un límite `<Suspense>` alrededor o `next build` falla.
 * Las transiciones del kanban de pedidos se validan en el hook
   (`ORDER_STATUS_FLOW`), nunca en el componente ni confiando solo en RLS.
+
+## Norma de cierre de feature (sesión 6)
+
+Al terminar cualquier feature el ciclo es: revisión de código →
+correcciones → gate de validación. El gate es rojo/verde, sin término
+medio:
+
+```bash
+npm run lint && npm run type-check && npm run test
+```
+
+(agregar `npm run test:e2e` cuando el stack de Supabase local esté arriba
+— `supabase status` en verde). Si algo de esto falla, la feature NO está
+terminada, sin importar qué tan segura se vea la IA de que ya la revisó.
+CI (`.github/workflows/ci.yml`) corre exactamente este mismo gate en cada
+push/PR contra `main`. Ver [docs/DEBUGGING.md](docs/DEBUGGING.md) para
+diagnosticar cuando el gate falla.
 
 ## Estado del proyecto
 
