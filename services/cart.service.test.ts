@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { addItem, checkout, listCartItems, removeItem, updateQuantity } from "./cart.service";
+import { describe, expect, it, vi } from "vitest";
+import { addItem, checkout, listCartItems, removeItem, subscribeToCartChanges, updateQuantity } from "./cart.service";
 import { createSupabaseMock, findInvokedChain } from "./test-utils/supabase-mock";
 
 describe("addItem", () => {
@@ -162,6 +162,44 @@ describe("updateQuantity / removeItem", () => {
   it("removeItem no lanza cuando el delete no tiene error", async () => {
     const supabase = createSupabaseMock({ tables: { cart_items: { data: null, error: null } } });
     await expect(removeItem("item-1", supabase)).resolves.toBeUndefined();
+  });
+});
+
+describe("subscribeToCartChanges", () => {
+  it("notifica a los listeners suscritos tras addItem, updateQuantity, removeItem y checkout", async () => {
+    const listener = vi.fn();
+    const unsubscribe = subscribeToCartChanges(listener);
+
+    const supabaseAdd = createSupabaseMock({
+      tables: { products: { data: { stock: 10 } }, cart_items: { data: null } },
+    });
+    await addItem("user-1", "prod-1", 1, supabaseAdd);
+    expect(listener).toHaveBeenCalledTimes(1);
+
+    const supabaseUpdate = createSupabaseMock({ tables: { cart_items: { data: null, error: null } } });
+    await updateQuantity("item-1", 2, supabaseUpdate);
+    expect(listener).toHaveBeenCalledTimes(2);
+
+    const supabaseRemove = createSupabaseMock({ tables: { cart_items: { data: null, error: null } } });
+    await removeItem("item-1", supabaseRemove);
+    expect(listener).toHaveBeenCalledTimes(3);
+
+    const supabaseCheckout = createSupabaseMock({ rpc: { create_order_from_cart: { data: "order-1" } } });
+    await checkout("user-1", supabaseCheckout);
+    expect(listener).toHaveBeenCalledTimes(4);
+
+    unsubscribe();
+  });
+
+  it("un listener dado de baja con unsubscribe ya no recibe notificaciones", async () => {
+    const listener = vi.fn();
+    const unsubscribe = subscribeToCartChanges(listener);
+    unsubscribe();
+
+    const supabase = createSupabaseMock({ tables: { cart_items: { data: null, error: null } } });
+    await removeItem("item-1", supabase);
+
+    expect(listener).not.toHaveBeenCalled();
   });
 });
 

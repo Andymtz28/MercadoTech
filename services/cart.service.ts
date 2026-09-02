@@ -6,6 +6,24 @@ import type { CartItemWithProduct } from "@/types/cart";
 
 type Client = SupabaseClient<Database>;
 
+// Sincroniza las instancias de useCart montadas a la vez (navbar, /carrito,
+// /producto/[id], /buscar): cada una llama a su propio createClient() y
+// mantiene estado local, así que sin este broadcast una mutación en una
+// página no se reflejaba en el contador del navbar hasta recargar — no hay
+// Realtime de Postgres en cart_items, así que se notifica a nivel de módulo,
+// igual que subscribeToAuthChanges pero sin pasar por el SDK de Supabase.
+type CartChangeListener = () => void;
+const cartChangeListeners = new Set<CartChangeListener>();
+
+export function subscribeToCartChanges(onChange: CartChangeListener): () => void {
+  cartChangeListeners.add(onChange);
+  return () => cartChangeListeners.delete(onChange);
+}
+
+function notifyCartChanged() {
+  cartChangeListeners.forEach((listener) => listener());
+}
+
 interface CartRow {
   id: string;
   product_id: string;
@@ -81,6 +99,7 @@ export async function addItem(
     const nextQuantity = Math.min(existing.quantity + quantity, product.stock);
     const { error } = await supabase.from("cart_items").update({ quantity: nextQuantity }).eq("id", existing.id);
     if (error) throw error;
+    notifyCartChanged();
     return;
   }
 
@@ -90,16 +109,19 @@ export async function addItem(
     quantity: Math.min(quantity, product.stock),
   });
   if (error) throw error;
+  notifyCartChanged();
 }
 
 export async function updateQuantity(cartItemId: string, quantity: number, supabase: Client = createClient()) {
   const { error } = await supabase.from("cart_items").update({ quantity }).eq("id", cartItemId);
   if (error) throw error;
+  notifyCartChanged();
 }
 
 export async function removeItem(cartItemId: string, supabase: Client = createClient()) {
   const { error } = await supabase.from("cart_items").delete().eq("id", cartItemId);
   if (error) throw error;
+  notifyCartChanged();
 }
 
 // Checkout simulado: la RPC valida stock, crea el pedido con snapshots,
@@ -107,5 +129,6 @@ export async function removeItem(cartItemId: string, supabase: Client = createCl
 export async function checkout(userId: string, supabase: Client = createClient()): Promise<string> {
   const { data, error } = await supabase.rpc("create_order_from_cart", { p_buyer_id: userId });
   if (error) throw error;
+  notifyCartChanged();
   return data as string;
 }

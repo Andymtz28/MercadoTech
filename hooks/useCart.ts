@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getErrorMessage } from "@/lib/utils";
-import { addItem, checkout, listCartItems, removeItem, updateQuantity } from "@/services/cart.service";
+import { addItem, checkout, listCartItems, removeItem, subscribeToCartChanges, updateQuantity } from "@/services/cart.service";
 import type { CartItemWithProduct } from "@/types/cart";
 
 export function useCart(userId?: string) {
@@ -29,6 +29,15 @@ export function useCart(userId?: string) {
 
   useEffect(() => {
     reload();
+  }, [reload]);
+
+  // Sin esto, cada instancia de useCart (navbar, /carrito, /producto/[id],
+  // /buscar) solo se entera de sus PROPIAS mutaciones — el contador del
+  // navbar se quedaba con el número viejo hasta un refresh completo.
+  useEffect(() => {
+    return subscribeToCartChanges(() => {
+      reload();
+    });
   }, [reload]);
 
   const add = useCallback(
