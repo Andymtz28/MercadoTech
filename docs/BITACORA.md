@@ -161,9 +161,9 @@ runner de CI.
   Supabase local. 7 de 8 tests fallaron.
 * Corrida #3 (`a8d0999`, fix del badge del carrito): job `checks`
   **verde**; job `e2e` **rojo de nuevo**, mismos 7 tests — el fix era
-  correcto pero insuficiente por sí solo (ver el segundo hallazgo abajo).
-* Resultado de la corrida siguiente (con TODOS los fixes de esta
-  sección): pendiente de confirmar — ver la nota al pie de esta fase.
+  correcto pero insuficiente por sí solo (ver el problema 2 abajo).
+* Corridas #4, #5 y #6: ver el resto de esta sección — terminan con
+  **ambos jobs verdes** (corrida #6, commit `9f4ced6`).
 
 Diagnosticar el job `e2e` requirió pedirle al usuario que copiara el log
 manualmente: GitHub exige sesión iniciada para ver logs de Actions
@@ -291,9 +291,13 @@ verificarlo. Corregido con `page.goto("/")` antes de abrir el menú —
 mismo patrón que ya usa `SellerSidebar` con su propio link "Volver a la
 tienda".
 
-Con las 9 correcciones de esta fase, las 24 pruebas E2E (8 × 3
-navegadores) deberían pasar en la próxima corrida de CI — confirmar en
-la pestaña Actions antes de dar la Fase 6.7 (y la sesión) por cerrada.
+**Corrida #6 (`9f4ced6`, con el problema 9): ✅ AMBOS jobs verdes** —
+`checks` en 36s, `e2e` en 249s (4m 9s). Fase 6.7 cerrada de verdad: 5
+corridas, 9 problemas reales encontrados y corregidos (3 bugs de
+producción: sincronización del carrito, crash del menú de usuario,
+logout no funcional; 6 correcciones a los tests que asumían estructura
+de UI/datos sin haberla verificado nunca, porque no había Docker local
+en este entorno hasta que CI lo proveyó).
 
 ### Fase 6.8 — Debugging y gate de validación (commit `828d80c`)
 
