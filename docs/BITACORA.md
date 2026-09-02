@@ -4,6 +4,209 @@ Una sección por sesión, la más reciente primero. Cada fase documenta qué se
 construyó, decisiones con su porqué, problemas encontrados (y cómo se
 resolvieron) y qué quedó fuera a propósito.
 
+## Sesión 6 — Testing y CI (2026-09-01)
+
+*Nota de alcance:* el "Estado del repositorio al iniciar la sesión" de
+`PROMPTS_sesion6.md` asume un cierre previo de Sesión 5 (commit `eed65ff`,
+4 Skills activas, carpeta `mcp/` con su propio type-check). Verificado
+contra `git log`: **este repo no tiene Sesión 5** — no existe `mcp/`, no
+existe ese commit, y solo hay 3 Skills reales (`analista-negocio`,
+`planificacion-por-fases`, `web-scraping`). Tampoco hay un cierre formal
+de Sesión 4 en esta bitácora (se ejecutó — commits `4cda952`..`cdeffef` —
+pero nunca se le agregó su sección; queda como pendiente heredado, fuera
+del alcance de esta sesión). Esta sesión 6 arrancó directamente sobre el
+commit `bd8ae49` (rediseño visual, ajeno al plan de fases) sin remoto de
+GitHub configurado: el Prompt 0 tuvo que crear el repositorio, conectar
+`origin` y hacer el primer push antes de instalar Vitest/Playwright.
+
+### Fase 6.0–6.1 — GitHub remoto + infraestructura Vitest (commits `c004dc8`, `b92520e`)
+
+**Construido:** repo conectado a GitHub (`Andymtz28/MercadoTech`) y
+primer push; `vitest.config.mts` (alias `@` → raíz, `environment: "node"`,
+cobertura v8 limitada a `lib/**`/`services/**`); scripts `test`,
+`test:watch`, `test:coverage`.
+
+**Decisión:** `environment: "node"` sin jsdom/Testing Library — esta
+sesión testea lógica y servicios, no componentes (decisión ya tomada en
+la spec).
+
+### Fase 6.2 — Tests de lógica pura (commit `1cf2d1f`)
+
+**Construido:** `lib/validators/auth.test.ts`, `lib/validators/product.test.ts`,
+`lib/utils.test.ts`, `lib/ai/context-builder.test.ts`, `lib/ai/prompts.test.ts`
+— 47 tests. Cobertura real (HTML report, `coverage/lib/validators/index.html`
+y `coverage/lib/ai/context-builder.ts.html`): **100 % líneas/ramas/funciones**
+en `lib/validators/` y en `context-builder.ts` — meta de la fase cumplida.
+
+**Problema (menor, corregido):** un comentario en `lib/utils.ts` estaba
+colgado sobre la función equivocada (documentaba `getErrorMessage` pero
+aparecía encima de `getMonogram`); se reubicó al escribir su test.
+
+**Fuera de alcance real:** el branch `remaining <= 0` al inicio del loop
+de presupuesto de `context-builder.ts` no se cubría con el primer intento
+de test (un candidato de 10 caracteres se filtraba antes de llegar al
+loop por `CONTEXT_BUILDER_MIN_CONTENT_LENGTH`); se ajustó a un candidato
+de 25 caracteres para ejercer la rama real.
+
+### Fase 6.3 — Services con Supabase mockeado (commit `8a1834e`)
+
+**Construido:** `services/test-utils/supabase-mock.ts` (fábrica
+encadenable programable + `findInvokedChain`); 14 archivos de test
+(`cart`, `order`, `product`, `seller`, `review`, `question`, `favorite`,
+`auth`, `embedding`, `vector-search`, `chat`, `category`, `home`,
+`storage`, `indexing-trigger`) — 138 tests. Cobertura real de `services/`:
+**99.29 % líneas, 92.11 % statements, 80.12 % branches, 98.9 % funciones**
+(meta de la fase: ≥80 % líneas, superada). `canAdvance` (antes helper
+privado de `hooks/useSellerOrders.ts`) se exportó para testearlo sin
+React — único cambio de producción permitido en esta fase.
+
+**Comportamiento real anclado (no "corregido"), tal como exige la fase:**
+
+* `cart.service.addItem` SUMA el duplicado y recorta a `[1, stock]` — no
+  rechaza cantidades inválidas con un piso de 1 (una cantidad de 0 se
+  guarda literalmente como 0).
+* `canAdvance(from, to)` usa `ORDER_STATUS_FLOW.indexOf`: como
+  `indexOf` de un valor no encontrado da `-1`, `canAdvance("cancelado",
+  "pendiente")` da `true` (y cualquier estado desconocido → "pendiente"
+  también), porque `-1 + 1 === indexOf("pendiente")`. Documentado como
+  bug real en el test, no corregido (fuera del alcance de esta sesión).
+* `useSellerOrders.moveOrder` rechaza una transición inválida en
+  silencio: no dispara ningún toast de error (la spec original asumía
+  que sí).
+* `checkout()` vive en `cart.service.ts`, no en `order.service.ts`;
+  `updateOrderStatus`/`listSellerOrders` viven en `order.service.ts`, no
+  en `seller.service.ts` (que no tiene funciones de pedidos). Los
+  archivos de test se organizaron según esta estructura real, no la que
+  asumía la spec.
+
+**Verificado:** la suite completa pasa con el stack de Supabase
+(Docker/local) apagado — ningún test depende de red real.
+
+### Fase 6.4 — Infraestructura Playwright (commit `2055901`)
+
+**Construido:** `playwright.config.ts` (build&&start en CI, dev server
+reutilizado en local, chromium-only en CI); `e2e/data/`, `e2e/fixtures/`,
+7 Page Objects; `data-testid` agregados a 6 componentes (`ProductCard`,
+`CartItemRow`, `CartSummary`, `OrdersKanban`, `OrderKanbanCard`,
+`SortableImageGallery`) — solo atributos, cero cambios de lógica/estilo;
+`Price` extendido para reenviar props de `<span>` (necesario para pasar
+`data-testid` desde los componentes que lo envuelven).
+
+**Problema (corregido, dato del seed):** el producto sin stock listado en
+la spec (`b0000000-…-06`) no es el real — verificado con `grep` contra
+`supabase/seed.sql`, el producto con stock 0 es `…-07` (el propio archivo
+lo marca con un comentario). Corregido en `e2e/data/users.ts`.
+
+### Fase 6.5–6.6 — E2E comprador y vendedor (commits `6bdc54b`, `50f1b09`)
+
+**Construido:** `buyer-flow.spec.ts` + `buyer-negative.spec.ts` (login →
+filtrar → comprar → ver pedido; stock 0 deshabilitado; carrito vacío;
+anónimo redirigido); `seller-flow.spec.ts` + `seller-negative.spec.ts`
+(publicar producto con imagen de fixture → aparece en tabla y catálogo →
+mover pedido `pagado` → `enviado` **por teclado** — foco en el asa →
+`Space` → flecha → `Space` — persiste tras `reload`; comprador ve
+"Enviado" en su detalle; `buyer1` rechazado en `/vendedor`; retroceder
+`enviado` → `pagado` rechazado). 24 tests enumerados (`playwright test
+--list`) — 8 specs × 3 navegadores.
+
+**Problema (corregido, dato del seed):** el único pedido `enviado` del
+seed pertenece a `seller2`, no a `seller1` — `seller-negative.spec.ts`
+mueve primero `SEED_PAID_ORDER_ID` (un pedido real de `seller1`) a
+`enviado` antes de probar el retroceso ilegal, en vez de asumir un
+pedido `enviado` preexistente de ese vendedor (esto obliga a correr esa
+suite con `workers: 1` para no chocar con otro test que dependa del mismo
+pedido).
+
+**Sin verificar en vivo dentro de esta sesión:** no hay stack Docker
+local disponible en este entorno — los specs se escribieron y se
+enumeraron (`--list`), pero su ejecución real contra un navegador y
+Supabase local se verificó por primera vez en el job `e2e` de GitHub
+Actions (Fase 6.7), que sí tiene Docker.
+
+### Fase 6.7 — CI en GitHub Actions (commits `78157e7`, `9866078`)
+
+**Construido:** `.github/workflows/ci.yml` con jobs `checks` (lint,
+type-check, `test:coverage`) y `e2e` (`needs: checks`; stack de Supabase
+local vía `supabase/setup-cli@v1`; credenciales leídas dinámicamente con
+`supabase status -o json`, no como secretos — son las claves estándar de
+cualquier instancia local); `"packageManager": "npm@10.9.2"`.
+
+**Decisiones corregidas contra el entorno real** (la spec asumía valores
+de otro proyecto):
+
+| Asumido por la spec | Valor real verificado | Acción |
+|---|---|---|
+| `npm@11.6.2` | `npm --version` local → `10.9.2` | Pin y `packageManager` con el valor real |
+| Node 24 | `node --version` local → `v22.16.0` | `setup-node` con `node-version: 22` |
+| Type-check de `mcp/` en el job `checks` | no existe `mcp/` en este repo | Paso omitido, documentado en un comentario del propio `ci.yml` |
+
+**Problema (grave, corregido) — CI run #1 rojo:** `Cannot find name
+'LayoutProps'` en los 4 layouts (`app/layout.tsx`, `app/(shop)/layout.tsx`,
+`app/(seller)/layout.tsx`, `app/(auth)/layout.tsx`). Causa real:
+`LayoutProps<...>` es un tipo ambiente que Next.js genera en
+`.next/types/routes.d.ts` solo después de correr `next dev`/`next build`
+al menos una vez — localmente "funcionaba" porque `.next/` ya existía de
+sesiones previas de `next dev`; un checkout limpio de CI nunca lo genera.
+Se descubrió `next typegen` (subcomando de Next 15 que genera esos tipos
+sin build completo) y se cambió `type-check` a `"next typegen && tsc
+--noEmit"` (commit `9866078`). Este bug era invisible en local desde el
+principio del proyecto — el primer checkout limpio real fue el del
+runner de CI.
+
+**Estado de la corrida en GitHub Actions al cierre de esta sección:** la
+corrida #1 (commit `78157e7`) quedó roja por el bug de arriba; la
+corrida #2 (commit `9866078`, con el fix) fue disparada y quedó
+**en progreso** al momento de escribir este párrafo — resultado real
+pendiente de confirmar en la pestaña Actions
+(`https://github.com/Andymtz28/MercadoTech/actions`) antes de dar la
+Fase 6.7 por cerrada del todo.
+
+### Fase 6.8 — Debugging y gate de validación (commit `828d80c`)
+
+**Construido:** `docs/DEBUGGING.md` (flujo síntoma→reproducir→logs→
+hipótesis→fix; catálogo de errores reales con mensaje literal — RLS,
+GRANT, recursión de policy, Hugging Face, dimensión de embeddings,
+`LayoutProps`/`next typegen`, lockfile de CI, mocks incompletos, kanban
+por teclado); norma de gate en `CLAUDE.md`.
+
+**Desviación de la spec (documentada, no corregida en silencio):** la
+Fase 6.8 original asume una Skill
+`.claude/skills/mercadotech-automatic-validator/SKILL.md` que este repo
+no tiene. En vez de crear una Skill nueva no pedida, la norma de gate
+(`npm run lint && npm run type-check && npm run test`, más
+`npm run test:e2e` si el stack local está arriba) quedó escrita
+directamente en `CLAUDE.md`. Verificado rompiendo a propósito una
+aserción de `hooks/useSellerOrders.test.ts` (el gate falló citando el
+test exacto) y revirtiendo (el gate volvió a verde) — mismo criterio de
+aceptación que pedía la spec, aplicado sin la Skill inexistente.
+
+### Números finales de la sesión
+
+* 21 archivos de test, **202 tests unitarios**, todos verdes
+  (`npm run test`).
+* Cobertura real (`npm run test:coverage`, HTML report):
+  `services/` 99.29 % líneas / 92.11 % statements / 80.12 % branches;
+  `lib/validators/` 100 % en las 4 métricas; `lib/ai/context-builder.ts`
+  y `lib/ai/prompts.ts` 100 % en las 4 métricas.
+* 24 tests E2E enumerados (8 specs × 3 navegadores en local; CI corre
+  solo los 8 de `chromium`).
+* 59 archivos, 6363 líneas insertadas entre `c004dc8` y `828d80c`.
+
+### Cambio de alcance heredado
+
+Por decisión ya registrada en `MercadoTech_sesion6.md`, esta sesión
+absorbió el contenido de la antigua "Fase 7.1" (CI) — la Sesión 7 arranca
+sin esa fase, directo en performance y despliegue.
+
+### Fuera de alcance (a propósito)
+
+* Tests de componentes React (esta sesión usa `environment: "node"`, sin
+  jsdom/Testing Library — decisión tomada en la spec).
+* Tests del servidor MCP (no existe en este repo).
+* Branch protection de GitHub y despliegue (Sesión 7).
+* Reconstrucción retroactiva del cierre de Sesión 4/5 en esta bitácora
+  (fuera del alcance pedido para esta sesión; queda como pendiente).
+
 ## Sesión 3 — UI Inteligente y Frontend Multimodal (2026-08-24 a 2026-08-27)
 
 ### Fase 3.0 — Entorno y herramientas (commit `0542d83`, 2026-08-24)

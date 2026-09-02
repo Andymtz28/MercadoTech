@@ -76,6 +76,19 @@ para no chocar con `/pedidos` del comprador. Middleware protege `/carrito`,
 * Las transiciones del kanban de pedidos se validan en el hook
   (`ORDER_STATUS_FLOW`), nunca en el componente ni confiando solo en RLS.
 
+### Convenciones de testing (sesión 6)
+
+* El test vive junto a su archivo fuente (`foo.ts` → `foo.test.ts`), no en
+  una carpeta `__tests__/` aparte.
+* Los tests de `services/*` INYECTAN el `SupabaseClient` por parámetro —
+  jamás `vi.mock` de `lib/supabase/*`; `lib/ai/*` sí se mockea por módulo
+  (única excepción, decisión 7 de `MercadoTech_sesion6.md`).
+* Un test se ancla al comportamiento REAL del código, nunca al que
+  "debería" tener — si algo parece un bug, se documenta en el test y en
+  `docs/BITACORA.md`, no se corrige en silencio.
+* `data-testid` en kebab-case con prefijo de dominio (`cart-item-row`,
+  `seller-order-card`); solo se agrega el atributo, nunca lógica/estilo.
+
 ## Norma de cierre de feature (sesión 6)
 
 Al terminar cualquier feature el ciclo es: revisión de código →
@@ -95,9 +108,14 @@ diagnosticar cuando el gate falla.
 
 ## Estado del proyecto
 
-Sesiones 2 y 3 completas y verificadas contra el proyecto Supabase remoto
-(catálogo, auth, carrito/checkout, panel de vendedor con drag & drop).
-Pendiente: sesión 1 (no ejecutada) y sesión 4 (RAG con Hugging Face, en curso).
-Detalle completo por fase, decisiones y bugs corregidos:
-[docs/BITACORA.md](docs/BITACORA.md) · checklist de accesibilidad:
-[docs/SESION3_CHECKLIST.md](docs/SESION3_CHECKLIST.md).
+Sesiones 2, 3 y 4 (RAG con Hugging Face) ejecutadas contra el proyecto
+Supabase remoto. Sesión 6 (testing y CI) completa: 202 tests unitarios +
+24 E2E (Playwright), CI en GitHub Actions (`.github/workflows/ci.yml`)
+corriendo en cada push/PR contra `main` — no toques `packageManager` en
+`package.json` sin repinnear la misma versión en `ci.yml`, o `npm ci`
+falla con `Missing ... from lock file` en el runner. Pendiente: sesión 1
+(no ejecutada), sesión 5 (nunca existió en este repo — no hay `mcp/`), y
+sesión 7 (performance, gestión de secretos, formalización del deploy en
+Vercel). Detalle completo por fase, decisiones y bugs corregidos:
+[docs/BITACORA.md](docs/BITACORA.md) · debugging: [docs/DEBUGGING.md](docs/DEBUGGING.md)
+· checklist de accesibilidad: [docs/SESION3_CHECKLIST.md](docs/SESION3_CHECKLIST.md).
