@@ -43,7 +43,11 @@ test.describe("Flujo comprador", () => {
       const item = cart.cartItem(LAPTOP_PRODUCT_ID);
       await item.getByRole("button", { name: "Aumentar cantidad" }).click();
       await expect(item.getByTestId("cart-item-quantity")).toHaveText("2");
-      await expect(page.getByRole("link", { name: /Carrito, 2 productos/ })).toBeVisible();
+      // CartIndicator es un Base UI <Button nativeButton={false} render={<Link/>}>:
+      // el DOM es un <a> real (navega bien) pero Base UI expone rol "button"
+      // en el árbol de accesibilidad, no "link" — verificado con Playwright
+      // (snapshot real: button "Carrito, 2 productos").
+      await expect(page.getByRole("button", { name: /Carrito, 2 productos/ })).toBeVisible();
     });
 
     await test.step("carrito → subtotal correcto → Comprar", async () => {
@@ -67,7 +71,9 @@ test.describe("Flujo comprador", () => {
     await test.step("logout → navbar anónimo", async () => {
       await page.getByRole("button", { name: /Menú de/ }).click();
       await page.getByRole("menuitem", { name: "Cerrar sesión" }).click();
-      await expect(page.getByRole("link", { name: "Iniciar sesión" })).toBeVisible();
+      // Mismo patrón que CartIndicator: UserMenu también usa
+      // <Button nativeButton={false} render={<Link/>}> → rol "button".
+      await expect(page.getByRole("button", { name: "Iniciar sesión" })).toBeVisible();
     });
   });
 });

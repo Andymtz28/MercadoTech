@@ -235,3 +235,22 @@ insert into public.ticket_messages (ticket_id, sender_role, content) values
   ('a0000000-0000-0000-0000-000000000001', 'humano', 'El vendedor confirmó que el paquete salió con retraso de la paquetería. Te comparto el número de guía por correo y damos seguimiento diario hasta la entrega.'),
   ('a0000000-0000-0000-0000-000000000002', 'usuario', 'Veo dos cargos idénticos en mi tarjeta por el mismo pedido del iPhone 13, ¿me pueden confirmar si es un error?'),
   ('a0000000-0000-0000-0000-000000000002', 'agente', 'Entiendo la preocupación, vamos a verificar con el procesador de pagos si se generó una duplicidad en la transacción y te contactamos con el resultado.');
+
+-- ---------------------------------------------------------------------------
+-- previous_price para "Bajaron de precio esta semana" (Home).
+--
+-- La migración 20260101000025 ya trae estos mismos UPDATE, con el comentario
+-- "no se toca seed.sql" — pero esa migración corre ANTES de este archivo en
+-- cualquier `supabase db reset` (migraciones primero, seed.sql al final), así
+-- que en un reset limpio (CI, un dev nuevo) los UPDATE de la migración no
+-- encuentran filas todavía y no hacen nada: previous_price queda NULL para
+-- todos y el Home no muestra ningún producto. En el proyecto remoto "funcionó"
+-- porque los productos ya existían cuando esa migración se aplicó con
+-- `db push`. Se repite aquí (idempotente, mismos IDs y valores) para que un
+-- reset limpio quede igual que el remoto — encontrado por el job e2e de CI
+-- (Fase 6.7): home.spec.ts no encontraba ningún data-testid="product-card".
+update public.products set previous_price = 23999.00 where id = 'b0000000-0000-0000-0000-000000000001'; -- Laptop Dell XPS 13, -21%
+update public.products set previous_price = 13999.00 where id = 'b0000000-0000-0000-0000-000000000004'; -- Samsung Galaxy S22, -21%
+update public.products set previous_price = 8499.00 where id = 'b0000000-0000-0000-0000-000000000009'; -- Monitor LG UltraGear 27", -18%
+update public.products set previous_price = 1899.00 where id = 'b0000000-0000-0000-0000-000000000012'; -- Router TP-Link Archer AX55, -21%
+update public.products set previous_price = 2799.00 where id = 'b0000000-0000-0000-0000-000000000014'; -- SSD Samsung 970 EVO 1TB, -18%

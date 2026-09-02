@@ -16,6 +16,9 @@ export class ProductPage {
   }
 
   get disabledReason() {
-    return this.page.getByText(/Inicia sesión para comprar|Es tu propio producto|Sin stock/);
+    // Anclado con ^$: sin esto, "Sin stock" (el motivo) también matchea por
+    // substring el label de disponibilidad "Sin stock disponible" — violación
+    // de "strict mode" real, encontrada por la corrida de CI en Fase 6.7.
+    return this.page.getByText(/^(Inicia sesión para comprar|Es tu propio producto|Sin stock)$/);
   }
 }

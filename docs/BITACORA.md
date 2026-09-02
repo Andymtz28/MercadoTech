@@ -153,13 +153,83 @@ sin build completo) y se cambió `type-check` a `"next typegen && tsc
 principio del proyecto — el primer checkout limpio real fue el del
 runner de CI.
 
-**Estado de la corrida en GitHub Actions al cierre de esta sección:** la
-corrida #1 (commit `78157e7`) quedó roja por el bug de arriba; la
-corrida #2 (commit `9866078`, con el fix) fue disparada y quedó
-**en progreso** al momento de escribir este párrafo — resultado real
-pendiente de confirmar en la pestaña Actions
-(`https://github.com/Andymtz28/MercadoTech/actions`) antes de dar la
-Fase 6.7 por cerrada del todo.
+**Estado de las corridas en GitHub Actions:**
+
+* Corrida #1 (`78157e7`): roja — bug de `LayoutProps` de arriba.
+* Corrida #2 (`9866078`, fix de `next typegen`): job `checks` **verde**;
+  job `e2e` **rojo** — primera ejecución real de los specs contra
+  Supabase local. 7 de 8 tests fallaron.
+* Corrida #3 (`a8d0999`, fix del badge del carrito): job `checks`
+  **verde**; job `e2e` **rojo de nuevo**, mismos 7 tests — el fix era
+  correcto pero insuficiente por sí solo (ver el segundo hallazgo abajo).
+* Resultado de la corrida siguiente (con TODOS los fixes de esta
+  sección): pendiente de confirmar — ver la nota al pie de esta fase.
+
+Diagnosticar el job `e2e` requirió pedirle al usuario que copiara el log
+manualmente: GitHub exige sesión iniciada para ver logs de Actions
+incluso en un repo público, y ni el navegador de este agente ni la
+extensión Claude in Chrome tenían esa sesión disponible.
+
+**Problema 1 (grave, corregido) — el badge del carrito no se sincroniza:**
+`hooks/useCart.ts` crea estado local independiente cada vez que se
+llama — el layout `(shop)` (navbar), `/carrito`, `/producto/[id]` y
+`/buscar` tienen CADA UNO su propia instancia con su propio
+`items`/`count`. Mutar el carrito desde una página nunca notificaba a
+las demás instancias montadas, así que el contador del navbar quedaba
+con el número viejo hasta un refresh completo — un bug real de UX que
+ningún test unitario podía atrapar (depende de dos componentes montados
+a la vez). Corregido con `subscribeToCartChanges` en `cart.service.ts`
+(mismo patrón que `subscribeToAuthChanges`, pero a nivel de módulo
+porque `cart_items` no tiene Realtime de Postgres activado). Commit
+`a8d0999`.
+
+**Problema 2 (test, corregido) — rol accesible real de los enlaces-botón:**
+Con el badge YA sincronizando, el mismo test seguía fallando. Se
+reprodujo localmente (`npx playwright test` apuntando al dev server
+contra el proyecto remoto, sin tocar Supabase local) y el snapshot de
+accesibilidad de Playwright reveló la causa real: `CartIndicator` y el
+"Iniciar sesión" anónimo de `UserMenu` son
+`<Button nativeButton={false} render={<Link/>}>` de Base UI — el DOM es
+un `<a>` real que navega bien, pero Base UI expone rol **"button"** en
+el árbol de accesibilidad, no "link" (ni siquiera con
+`nativeButton={false}`, a diferencia de lo que sugiere la nota de la
+Fase 3.2). Los specs usaban `getByRole("link", ...)`. Corregido en
+`buyer-flow.spec.ts` (2 asserts).
+
+**Problema 3 (test, corregido) — carrera de login sin esperar el redirect:**
+`LoginPage.login()` hacía clic en "Iniciar sesión" y retornaba de
+inmediato, sin esperar el `router.push()` posterior al login exitoso.
+Varios tests navegaban a la siguiente página ANTES de que la sesión
+quedara establecida, cayendo como anónimos: esto explica
+`seller-negative.spec.ts` viendo `/login?redirectTo=...` donde esperaba
+`/` (buyer1 nunca llegó autenticado), y muy probablemente los timeouts de
+`seller-flow.spec.ts` (heading nunca aparece: `/vendedor/productos`
+redirige a login) y del kanban en `seller-negative.spec.ts` (la página
+de pedidos tampoco carga sin sesión). Corregido con
+`page.waitForURL(url => !url.pathname.startsWith("/login"))` dentro de
+`LoginPage.login()` — arregla la carrera para las 4 fases que dependen
+del login (6.5, 6.6 y ambos negativos) desde un solo lugar.
+
+**Problema 4 (test, corregido) — regex sin anclar en `disabledReason`:**
+`buyer-negative.spec.ts` (producto sin stock) violaba el "strict mode" de
+Playwright: el regex `/Sin stock/` (sin anclar) matcheaba TANTO el motivo
+deshabilitado ("Sin stock", en `BuyBox.tsx`) COMO el label de
+disponibilidad ("Sin stock **disponible**", el mismo componente, dos
+párrafos distintos) porque el segundo contiene al primero como
+substring. Corregido anclando con `^(...)$` en
+`ProductPage.disabledReason`.
+
+**Problema 5 (dato, corregido) — `previous_price` no sobrevive un reset
+limpio:** `home.spec.ts` no encontraba ningún `data-testid="product-card"`
+porque la sección "Bajaron de precio" del Home queda vacía. Causa real:
+la migración `20260101000025` fija `previous_price` con `UPDATE ...
+WHERE id = ...`, pero en cualquier `supabase db reset` las migraciones
+corren ANTES que `seed.sql` — el `UPDATE` se ejecuta contra una tabla
+`products` todavía vacía y no actualiza ninguna fila. En el proyecto
+remoto "funcionó" porque los productos ya existían cuando esa migración
+se aplicó con `db push` (nunca hubo un reset completo ahí). Corregido
+repitiendo los mismos 5 `UPDATE` al final de `seed.sql` (idempotente,
+mismos IDs/valores) para que un reset limpio quede igual que el remoto.
 
 ### Fase 6.8 — Debugging y gate de validación (commit `828d80c`)
 
