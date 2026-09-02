@@ -32,7 +32,7 @@ export default function ShopLayout({ children }: LayoutProps<"/">) {
       />
       <main className="flex-1">{children}</main>
       <footer className="border-t py-8 text-center text-sm text-muted-foreground">
-        <Container>MercadoTech — laboratorio del curso Claude Code for Developers</Container>
+        <Container>MercadoTech © {new Date().getFullYear()} — laboratorio del curso Claude Code for Developers</Container>
       </footer>
       <ChatWidget />
     </div>
