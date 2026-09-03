@@ -54,7 +54,7 @@ describe("ask — orquestación", () => {
       tables: { products: { data: productRow } },
     });
 
-    await ask("laptop liviana para la universidad", "compras", supabase);
+    await ask("laptop liviana para la universidad", "compras", supabase, "user-1");
 
     const embOrder = vi.mocked(generateEmbedding).mock.invocationCallOrder[0];
     const ctxOrder = vi.mocked(buildContext).mock.invocationCallOrder[0];
@@ -67,7 +67,7 @@ describe("ask — orquestación", () => {
     const supabase = createSupabaseMock({
       rpc: { match_knowledge: { data: [] } },
     });
-    await ask("q", "compras", supabase);
+    await ask("q", "compras", supabase, "user-1");
     expect(supabase.rpc).toHaveBeenCalledWith("match_knowledge", expect.objectContaining({ p_source_type: "producto" }));
   });
 
@@ -75,7 +75,7 @@ describe("ask — orquestación", () => {
     const supabase = createSupabaseMock({
       rpc: { match_knowledge: { data: [] } },
     });
-    await ask("q", "soporte", supabase);
+    await ask("q", "soporte", supabase, "user-1");
     expect(supabase.rpc).toHaveBeenCalledWith(
       "match_knowledge",
       expect.objectContaining({ p_source_type: "articulo_soporte" }),
@@ -86,7 +86,7 @@ describe("ask — orquestación", () => {
     const { generateCompletion } = await import("@/lib/ai/completion");
     const supabase = createSupabaseMock({ rpc: { match_knowledge: { data: [] } } });
 
-    const result = await ask("¿venden autos usados?", "compras", supabase);
+    const result = await ask("¿venden autos usados?", "compras", supabase, "user-1");
 
     expect(result.hasRelevantContext).toBe(false);
     expect(result.sources).toEqual([]);
@@ -99,7 +99,7 @@ describe("ask — orquestación", () => {
       tables: { products: { data: productRow } },
     });
 
-    const result = await ask("laptop liviana", "compras", supabase);
+    const result = await ask("laptop liviana", "compras", supabase, "user-1");
 
     expect(result.sources[0]).toMatchObject({ sourceId: "p1", price: 18999 });
     expect(result.sources[0].imageUrl).toContain("s1/p1/1.jpg");
@@ -122,7 +122,7 @@ describe("ask — orquestación", () => {
       },
     });
 
-    const result = await ask("¿cómo devuelvo un producto?", "soporte", supabase);
+    const result = await ask("¿cómo devuelvo un producto?", "soporte", supabase, "user-1");
 
     expect(result.sources[0]).toMatchObject({ sourceId: "a1", category: "Pedidos" });
   });
@@ -133,7 +133,7 @@ describe("ask — orquestación", () => {
       tables: { products: { data: null } }, // el producto ya no existe
     });
 
-    const result = await ask("laptop liviana", "compras", supabase);
+    const result = await ask("laptop liviana", "compras", supabase, "user-1");
 
     expect(result.sources[0]).toEqual({ sourceType: "producto", sourceId: "p1", title: "Laptop ligera", similarity: 0.9 });
   });
@@ -144,7 +144,7 @@ describe("ask — orquestación", () => {
       tables: { products: { data: productRow } },
     });
 
-    const result = await ask("laptop liviana", "compras", supabase);
+    const result = await ask("laptop liviana", "compras", supabase, "user-1");
 
     expect(result.metadata.retrievedCount).toBe(1);
     expect(result.metadata.usedSourceCount).toBe(1);
@@ -158,6 +158,36 @@ describe("ask — orquestación", () => {
 
     const supabase = createSupabaseMock({ rpc: { match_knowledge: { data: [] } } });
 
-    await expect(ask("q", "compras", supabase)).rejects.toThrow("El modelo ya no está disponible");
+    await expect(ask("q", "compras", supabase, "user-1")).rejects.toThrow("El modelo ya no está disponible");
+  });
+
+  it("modo 'analisis': NO busca en match_knowledge, usa los datos reales del vendedor", async () => {
+    const { generateCompletion } = await import("@/lib/ai/completion");
+    const supabase = createSupabaseMock({
+      tables: {
+        order_items: {
+          data: [
+            {
+              id: "i1",
+              product_id: "p1",
+              title_snapshot: "Laptop ligera",
+              quantity: 1,
+              price_snapshot: "18999.00",
+              orders: { id: "o1", status: "entregado", created_at: "2026-01-02", buyer_id: "b1" },
+            },
+          ],
+        },
+        products: { data: [productRow] },
+      },
+    });
+
+    const result = await ask("¿cuánto he vendido?", "analisis", supabase, "s1");
+
+    expect(supabase.rpc).not.toHaveBeenCalled();
+    expect(result.sources).toEqual([]);
+    expect(result.hasRelevantContext).toBe(true);
+    const [, userMessage] = vi.mocked(generateCompletion).mock.calls.at(-1)!;
+    expect(userMessage).toContain("Laptop ligera");
+    expect(userMessage).toContain("¿cuánto he vendido?");
   });
 });

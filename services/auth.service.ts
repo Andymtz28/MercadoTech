@@ -16,6 +16,13 @@ export async function register(input: RegisterInput, supabase: Client = createCl
     password: input.password,
     options: {
       data: { display_name: input.displayName, role: input.role },
+      // Sin esto, Supabase usa la "Site URL" fija del dashboard del proyecto
+      // para el link de confirmación — en producción eso mandaba al usuario
+      // de vuelta a localhost. NEXT_PUBLIC_SITE_URL hace que el redirect sea
+      // correcto tanto en local como en cada entorno de Vercel (requiere
+      // agregar `${NEXT_PUBLIC_SITE_URL}/**` a la lista de Redirect URLs en
+      // Supabase → Authentication → URL Configuration).
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/login`,
     },
   });
   if (error) throw error;

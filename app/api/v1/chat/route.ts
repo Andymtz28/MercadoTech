@@ -6,7 +6,7 @@ import { getErrorMessage } from "@/lib/utils";
 import { CHAT_QUERY_MAX_CHARS } from "@/lib/constants/ai";
 import type { ChatMode } from "@/types/chat";
 
-const VALID_MODES: ChatMode[] = ["compras", "soporte"];
+const VALID_MODES: ChatMode[] = ["compras", "soporte", "analisis"];
 
 // Cliente de SESIÓN (no admin): la búsqueda debe respetar la RLS de
 // knowledge_embeddings (decisión 1 — la IA exige sesión).
@@ -34,11 +34,27 @@ export async function POST(request: NextRequest) {
     return apiError(400, "query_too_long", `query no puede superar ${CHAT_QUERY_MAX_CHARS} caracteres.`);
   }
   if (typeof mode !== "string" || !VALID_MODES.includes(mode as ChatMode)) {
-    return apiError(422, "invalid_mode", "mode debe ser 'compras' o 'soporte'.");
+    return apiError(422, "invalid_mode", "mode debe ser 'compras', 'soporte' o 'analisis'.");
   }
 
   try {
-    const result = await ask(query, mode as ChatMode, supabase);
+    // "analisis" expone datos propios del vendedor (ventas, productos) —
+    // no es un problema de RLS (la BD ya aísla eso), pero el modo en sí no
+    // debe ni ofrecerse a un comprador. Se verifica el rol server-side, no
+    // solo ocultando la pestaña en el cliente.
+    if (mode === "analisis") {
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+      if (profileError) throw profileError;
+      if (profile.role !== "seller" && profile.role !== "admin") {
+        return apiError(403, "forbidden", "El modo de análisis es solo para cuentas de vendedor.");
+      }
+    }
+
+    const result = await ask(query, mode as ChatMode, supabase, user.id);
     console.log(
       `[chat] mode=${mode} retrievedCount=${result.metadata.retrievedCount} usedSourceCount=${result.metadata.usedSourceCount} hasRelevantContext=${result.hasRelevantContext}`,
     );

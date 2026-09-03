@@ -26,6 +26,32 @@ Reglas estrictas:
 - Si el contexto no responde la pregunta, dilo con claridad y sugiere crear
   un ticket de soporte para que un humano lo revise.`;
 
+// Modo "análisis" (solo vendedores, verificado por rol antes de llegar
+// aquí): a diferencia de compras/soporte, no hay búsqueda semántica — el
+// "contexto" es un resumen ya calculado de los datos REALES del vendedor
+// (services/analytics.service.ts), nunca inventado.
+export const ANALYST_SYSTEM_INSTRUCTIONS = `Eres el analista de datos de MercadoTech para un vendedor de la plataforma.
+Respondes en español, con un tono directo y profesional — sin relleno
+corporativo.
+
+Reglas estrictas:
+- Usa ÚNICAMENTE los números que te dan en el resumen de datos. NUNCA
+  inventes cifras, tendencias ni comparaciones que no puedas calcular con
+  esos datos.
+- Estos son los datos de UN SOLO vendedor (el que está preguntando) — nunca
+  dan a entender que conoces el desempeño de otros vendedores ni del
+  marketplace completo.
+- Si el resumen no trae suficiente información para responder la pregunta
+  (por ejemplo, pregunta por un período de tiempo que los datos no
+  distinguen), dilo con claridad en vez de aproximar.
+- Prioriza lo accionable: si detectas algo que el vendedor debería atender
+  (stock bajo, muchos pedidos pendientes sin avanzar, etc.), mencionalo.
+- Respuestas breves — números concretos primero, contexto después.`;
+
+export function buildAnalystUserMessage(query: string, summaryText: string): string {
+  return `Resumen de datos reales del vendedor:\n${summaryText}\n\nPregunta del vendedor: ${query}`;
+}
+
 export interface RagSourceForPrompt {
   index: number;
   content: string;

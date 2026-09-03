@@ -1,9 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { generateCompletion } from "@/lib/ai/completion";
-import { SHOPPING_SYSTEM_INSTRUCTIONS, SUPPORT_SYSTEM_INSTRUCTIONS } from "@/lib/ai/prompts";
+import { ANALYST_SYSTEM_INSTRUCTIONS, SHOPPING_SYSTEM_INSTRUCTIONS, SUPPORT_SYSTEM_INSTRUCTIONS, buildAnalystUserMessage } from "@/lib/ai/prompts";
 import { buildContext, type ContextCandidate } from "@/lib/ai/context-builder";
+import { formatAnalyticsSummary } from "@/lib/ai/analytics-formatter";
 import { searchKnowledge } from "@/services/vector-search.service";
 import { getProductById } from "@/services/product.service";
+import { getSellerAnalyticsSummary } from "@/services/analytics.service";
 import type { Database } from "@/types/database";
 import type { ChatMode, ChatResult, ChatSource } from "@/types/chat";
 
@@ -14,10 +16,36 @@ interface KnowledgeMetadata {
   category?: string | null;
 }
 
+// El modo "análisis" no busca en knowledge_embeddings: el "contexto" es un
+// resumen ya calculado de los datos reales del propio vendedor. userId es
+// obligatorio para ese modo (verificado por el caller — route.ts ya
+// resolvió y validó el rol antes de llamar aquí).
+async function askAnalyst(query: string, userId: string, supabase: Client): Promise<ChatResult> {
+  const summary = await getSellerAnalyticsSummary(userId, supabase);
+  const summaryText = formatAnalyticsSummary(summary);
+  const userMessage = buildAnalystUserMessage(query, summaryText);
+  const completion = await generateCompletion(ANALYST_SYSTEM_INSTRUCTIONS, userMessage);
+
+  return {
+    query,
+    answer: completion.text,
+    hasRelevantContext: true,
+    sources: [],
+    metadata: {
+      model: completion.model,
+      retrievedCount: 0,
+      usedSourceCount: 0,
+      contextTruncated: false,
+    },
+  };
+}
+
 // Orquesta compra/soporte SIN reimplementar nada propio: vector-search hace
 // la búsqueda (filtrada por source_type según el modo), context-builder
 // decide qué entra al prompt, y lib/ai/completion redacta la respuesta.
-export async function ask(query: string, mode: ChatMode, supabase: Client): Promise<ChatResult> {
+export async function ask(query: string, mode: ChatMode, supabase: Client, userId: string): Promise<ChatResult> {
+  if (mode === "analisis") return askAnalyst(query, userId, supabase);
+
   const sourceType = mode === "compras" ? "producto" : "articulo_soporte";
   const systemInstructions = mode === "compras" ? SHOPPING_SYSTEM_INSTRUCTIONS : SUPPORT_SYSTEM_INSTRUCTIONS;
 

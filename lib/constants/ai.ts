@@ -23,13 +23,17 @@ export const VECTOR_SEARCH_MAX_TOP_K = 20;
 // Similitud mínima para considerar un resultado relevante. Provisional:
 // pares de texto NO relacionados ya rondan 0.1–0.2 (comparten idioma); los
 // relacionados suelen superar 0.4. Se calibra con datos reales en la Fase 4.8.
-export const VECTOR_SEARCH_DEFAULT_SIMILARITY_THRESHOLD = 0.3;
+// Bajado de 0.3 a 0.2: con 0.3 quedaban afuera preguntas con palabras
+// parecidas pero no idénticas a las del contenido indexado (ej. "laptops"
+// contra artículos que dicen "laptop"), y el asistente respondía "no
+// encontré información" habiendo contenido relacionado de sobra.
+export const VECTOR_SEARCH_DEFAULT_SIMILARITY_THRESHOLD = 0.2;
 
 // Cuántas fuentes entran como máximo al contexto del LLM, y el mismo piso
 // de similitud que la búsqueda (una fuente ya recuperada pero poco
 // relevante tampoco debería colarse al contexto).
 export const CONTEXT_BUILDER_DEFAULT_MAX_SOURCES = 5;
-export const CONTEXT_BUILDER_DEFAULT_MIN_SIMILARITY = 0.3;
+export const CONTEXT_BUILDER_DEFAULT_MIN_SIMILARITY = 0.2;
 
 // Fuentes con menos de esto de contenido (ej. un título suelto sin cuerpo)
 // no aportan nada al redactor — se descartan antes de gastar presupuesto.
@@ -49,7 +53,13 @@ export const CONTEXT_BUILDER_MIN_TRUNCATED_SOURCE_CHARS = 200;
 export const HUGGINGFACE_CHAT_MODEL_DEFAULT = "meta-llama/Llama-3.1-8B-Instruct";
 export const HUGGINGFACE_CHAT_MAX_TOKENS = 1024;
 
-// Límite de longitud de la consulta del usuario (compras/soporte), tanto
-// para UX (nadie escribe una pregunta de 4000+ caracteres de buena fe) como
-// para no gastar cuota de la API en abusos.
+// Límite de longitud de la consulta del usuario (compras/soporte/análisis),
+// tanto para UX (nadie escribe una pregunta de 4000+ caracteres de buena
+// fe) como para no gastar cuota de la API en abusos.
 export const CHAT_QUERY_MAX_CHARS = 4000;
+
+// Modo "análisis" (solo vendedores): cuántos productos entran al ranking
+// de más vendidos que se le pasa al modelo, y a partir de qué stock un
+// producto activo se marca como bajo.
+export const ANALYST_TOP_PRODUCTS_LIMIT = 5;
+export const ANALYST_LOW_STOCK_THRESHOLD = 3;
