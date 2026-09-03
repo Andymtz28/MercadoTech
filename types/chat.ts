@@ -1,4 +1,7 @@
-export type ChatMode = "compras" | "soporte";
+// "analisis": solo disponible para vendedores (verificado por rol en
+// app/api/v1/chat/route.ts) — el asistente actúa como analista de datos
+// sobre las ventas/productos propios del vendedor, no del marketplace.
+export type ChatMode = "compras" | "soporte" | "analisis";
 
 // Solo `price`/`imageUrl` (producto) o `category` (artículo) según
 // sourceType — el chat los hidrata para que SourcesList arme el mini-card

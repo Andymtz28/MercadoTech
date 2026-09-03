@@ -10,7 +10,7 @@ import { ChatInput } from "@/components/chat/ChatInput";
 import { cn } from "@/lib/utils";
 import type { ChatMode } from "@/types/chat";
 
-const MODES: { value: ChatMode; label: string; placeholder: string; empty: string }[] = [
+const MODES: { value: ChatMode; label: string; placeholder: string; empty: string; sellerOnly?: boolean }[] = [
   {
     value: "compras",
     label: "Comprar",
@@ -23,6 +23,13 @@ const MODES: { value: ChatMode; label: string; placeholder: string; empty: strin
     placeholder: "¿En qué necesitas ayuda?",
     empty: "Pregúntame sobre envíos, devoluciones o garantías.",
   },
+  {
+    value: "analisis",
+    label: "Análisis",
+    placeholder: "¿Cuánto he vendido este mes?",
+    empty: "Pregúntame sobre tus ventas, productos más vendidos o stock bajo.",
+    sellerOnly: true,
+  },
 ];
 
 // Widget flotante disponible en toda la tienda (no páginas dedicadas): un
@@ -32,12 +39,18 @@ export function ChatWidget() {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<ChatMode>("compras");
+  // Los 3 hooks se llaman siempre (regla de Hooks) — lo que cambia según el
+  // rol es solo qué pestañas se OFRECEN abajo; el servidor igual vuelve a
+  // verificar el rol antes de responder en modo "analisis".
   const chats = {
     compras: useChat("compras"),
     soporte: useChat("soporte"),
+    analisis: useChat("analisis"),
   };
   const active = chats[mode];
-  const activeMode = MODES.find((m) => m.value === mode)!;
+  const isSeller = user?.role === "seller" || user?.role === "admin";
+  const visibleModes = MODES.filter((m) => !m.sellerOnly || isSeller);
+  const activeMode = visibleModes.find((m) => m.value === mode) ?? visibleModes[0];
 
   if (!user) return null;
 
@@ -56,7 +69,7 @@ export function ChatWidget() {
           </div>
 
           <div className="flex gap-1 border-b border-border p-2">
-            {MODES.map((m) => (
+            {visibleModes.map((m) => (
               <button
                 key={m.value}
                 type="button"
